@@ -1,0 +1,4 @@
+interface:
+  display_name: "知识 A/B-roll 成片"
+  short_description: "把 SRT 与 MP3 制作为 A/B-roll 交替的知识视频"
+  default_prompt: "使用 $knowledge-abroll-video，把我的 SRT 和 MP3 制作为可审阅、可复现的 A/B-roll 知识视频。"

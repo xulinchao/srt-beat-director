@@ -1,0 +1,28 @@
+# Local runs and generated output
+/.tmp/
+/workspaces/
+
+# Development-only fixtures and source research
+/tests/
+/research/
+/docs/
+
+# Project documentation is not part of the installable Skill package
+/README.md
+
+# Generated validation reports
+/references/semantic-template-validation-report.json
+/templates/template-validation-report.json
+
+# Python caches
+**/__pycache__/
+*.py[cod]
+
+# JavaScript dependencies and build caches
+**/node_modules/
+**/.cache/
+
+# Local logs and OS metadata
+*.log
+.DS_Store
+Thumbs.db

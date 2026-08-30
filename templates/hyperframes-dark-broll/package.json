@@ -1,0 +1,8 @@
+{
+  "name": "srt-beat-director-dark-broll-templates",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "python check_templates.py --version 0.8.19"
+  }
+}

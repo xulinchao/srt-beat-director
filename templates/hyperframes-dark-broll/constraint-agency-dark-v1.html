@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="zh-CN" data-composition-variables='[{"id":"eyebrow","type":"string","label":"Eyebrow","default":"边界 × 行动"},{"id":"title","type":"string","label":"Title","default":"天命划河道，人事决定游多远"},{"id":"constraint_label","type":"string","label":"Constraint label","default":"天命"},{"id":"constraint_detail","type":"string","label":"Constraint detail","default":"宽窄与流向"},{"id":"agency_label","type":"string","label":"Agency label","default":"人事"},{"id":"agency_detail","type":"string","label":"Agency detail","default":"行动的距离"}]'>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=1920, height=1080" />
+  <title>Constraint and Agency Dark B-roll</title>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+  <link rel="stylesheet" href="shared.css" />
+  <style>
+    .river { position:absolute; left:110px; top:280px; width:1460px; height:300px; border:4px solid #67e8c7; border-radius:48% 42% 46% 38%; transform:rotate(-2deg); }
+    .flow { position:absolute; left:210px; top:420px; width:1120px; height:8px; }
+    .flow::after { content:""; position:absolute; right:-18px; top:-13px; border-left:28px solid #67e8c7; border-top:16px solid transparent; border-bottom:16px solid transparent; }
+    .constraint { position:absolute; left:150px; top:210px; width:400px; padding:28px 34px; }
+    .agency { position:absolute; right:100px; top:488px; width:430px; padding:28px 34px; }
+    .traveler { position:absolute; left:480px; top:391px; width:48px; height:48px; border:7px solid #f4b860; border-radius:50%; background:#111827; box-shadow:0 0 0 10px rgba(244,184,96,.12); }
+  </style>
+</head>
+<body>
+  <div id="constraint-root" class="root" data-composition-id="constraint-agency-dark-v1" data-start="0" data-width="1920" data-height="1080" data-duration="10">
+    <section id="constraint-scene" class="clip" data-start="0" data-duration="10" data-track-index="1">
+      <div class="stage"><div class="grain"></div></div>
+      <main class="content">
+        <div id="constraint-eyebrow" class="eyebrow" data-var-text="eyebrow">边界 × 行动</div>
+        <h1 id="constraint-title" data-var-text="title">天命划河道，人事决定游多远</h1>
+        <div id="constraint-river" class="river"></div>
+        <div id="constraint-flow" class="flow sketch-line"></div>
+        <article id="constraint-card" class="constraint card"><div class="label" data-var-text="constraint_label">天命</div><div class="big" data-var-text="constraint_detail">宽窄与流向</div></article>
+        <div id="constraint-traveler" class="traveler"></div>
+        <article id="agency-card" class="agency card"><div class="label amber" data-var-text="agency_label">人事</div><div class="big" data-var-text="agency_detail">行动的距离</div></article>
+      </main>
+    </section>
+  </div>
+  <script>
+    window.__timelines = window.__timelines || {};
+    const tl = gsap.timeline({ paused: true });
+    tl.from("#constraint-eyebrow, #constraint-title", { y: 28, opacity: 0, duration: .55, stagger: .12, ease: "power3.out" }, .2)
+      .from("#constraint-river", { scaleX: .15, opacity: 0, transformOrigin: "left center", duration: .9, ease: "power2.out" }, 1.1)
+      .from("#constraint-flow", { scaleX: 0, duration: .7, ease: "power2.out" }, 2.0)
+      .from("#constraint-card", { x: -55, opacity: 0, duration: .55, ease: "power3.out" }, 2.6)
+      .from("#constraint-traveler", { scale: 0, opacity: 0, duration: .35, ease: "back.out(1.7)" }, 4.1)
+      .to("#constraint-traveler", { x: 620, duration: 2.1, ease: "power1.inOut" }, 4.45)
+      .from("#agency-card", { x: 55, opacity: 0, duration: .55, ease: "power3.out" }, 6.2);
+    window.__timelines["constraint-agency-dark-v1"] = tl;
+  </script>
+</body>
+</html>

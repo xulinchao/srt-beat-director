@@ -1,0 +1,56 @@
+{
+  "schema_version": "0.1",
+  "checked_at": "2026-08-30",
+  "policy": {
+    "local_first": true,
+    "public_visibility_is_not_a_license": true,
+    "unlicensed_repository_use": "study-abstract-motion-skeleton-only",
+    "required_record": [
+      "url",
+      "checked_at",
+      "license",
+      "original_framework",
+      "selected_path",
+      "semantic_fit",
+      "migration_plan"
+    ]
+  },
+  "sources": [
+    {
+      "id": "hyperframes-launches",
+      "url": "https://github.com/heygen-com/hyperframes-launches",
+      "description": "HeyGen 产品发布视频使用的独立 HyperFrames compositions。",
+      "original_framework": "HyperFrames",
+      "license": "not-detected",
+      "usage_policy": "structure-study-only-until-license-verified",
+      "notes": "仓库公开且 README 允许 preview/render/remix 的操作说明，但 2026-08-30 未检测到仓库许可证文件；不得据此默认复制源码。"
+    },
+    {
+      "id": "vibe-motion-skills",
+      "url": "https://github.com/vibe-motion/skills",
+      "description": "包含 SVG、Three.js、Remotion 和其他动效工作流的技能集合。",
+      "original_framework": "mixed",
+      "license": "not-detected-at-repository-root",
+      "usage_policy": "inspect-per-skill-license-before-reuse",
+      "notes": "部分子技能声明各自素材许可，但仓库根目录未检测到统一许可证；必须逐项检查。"
+    },
+    {
+      "id": "video-shotcraft",
+      "url": "https://github.com/Vincentwei1021/video-shotcraft",
+      "description": "Remotion 视频镜头配方、预览和生产模板。",
+      "original_framework": "Remotion",
+      "license": "Apache-2.0",
+      "usage_policy": "code-reuse-allowed-with-license-compliance-and-hyperframes-port",
+      "notes": "可以研究并在遵守 Apache-2.0 的前提下移植；仍需记录选定路径、署名和修改。"
+    },
+    {
+      "id": "60fps-design",
+      "url": "https://60fps.design/",
+      "description": "移动端与网页 UI/UX 动效灵感库。",
+      "original_framework": "reference-gallery",
+      "license": "per-item-or-site-terms-not-verified",
+      "usage_policy": "visual-reference-only",
+      "notes": "适合查找交互和阶段顺序，不作为默认源码仓库。"
+    }
+  ]
+}

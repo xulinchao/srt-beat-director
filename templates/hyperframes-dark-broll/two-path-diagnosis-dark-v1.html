@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="zh-CN" data-composition-variables='[{"id":"eyebrow","type":"string","label":"Eyebrow","default":"先诊断，再决定"},{"id":"title","type":"string","label":"Title","default":"是真的尽头，还是暂时疲惫？"},{"id":"boundary_label","type":"string","label":"Boundary label","default":"真实边界"},{"id":"boundary_action","type":"string","label":"Boundary action","default":"认清，然后释怀"},{"id":"fatigue_label","type":"string","label":"Fatigue label","default":"暂时疲惫"},{"id":"fatigue_action","type":"string","label":"Fatigue action","default":"恢复，然后继续"}]'>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=1920, height=1080" />
+  <title>Two Path Diagnosis Dark B-roll</title>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+  <link rel="stylesheet" href="shared.css" />
+  <style>
+    .origin { position:absolute; left:90px; top:455px; width:54px; height:54px; border:7px solid #fffdf8; border-radius:50%; }
+    .path { position:absolute; left:138px; width:720px; height:9px; transform-origin:left center; }
+    .left-path { top:405px; transform:rotate(-8deg); background:#f4b860; }
+    .right-path { top:515px; transform:rotate(8deg); background:#67e8c7; }
+    .path::after { content:""; position:absolute; right:-4px; top:-12px; width:30px; height:30px; border:6px solid currentColor; border-radius:50%; background:#111827; }
+    .left-path { color:#f4b860; }
+    .right-path { color:#67e8c7; }
+    .result { position:absolute; width:500px; height:220px; padding:34px 40px; }
+    .left-result { left:990px; top:280px; }
+    .right-result { left:990px; top:520px; }
+  </style>
+</head>
+<body>
+  <div id="paths-root" class="root" data-composition-id="two-path-diagnosis-dark-v1" data-start="0" data-width="1920" data-height="1080" data-duration="7">
+    <section id="paths-scene" class="clip" data-start="0" data-duration="7" data-track-index="1">
+      <div class="stage"><div class="grain"></div></div>
+      <main class="content">
+        <div id="paths-eyebrow" class="eyebrow" data-var-text="eyebrow">先诊断，再决定</div>
+        <h1 id="paths-title" data-var-text="title">是真的尽头，还是暂时疲惫？</h1>
+        <div id="paths-origin" class="origin"></div>
+        <div id="boundary-path" class="path left-path"></div>
+        <div id="fatigue-path" class="path right-path"></div>
+        <article id="boundary-result" class="result left-result card"><div class="label amber" data-var-text="boundary_label">真实边界</div><div class="big" data-var-text="boundary_action">认清，然后释怀</div></article>
+        <article id="fatigue-result" class="result right-result card"><div class="label" data-var-text="fatigue_label">暂时疲惫</div><div class="big" data-var-text="fatigue_action">恢复，然后继续</div></article>
+      </main>
+    </section>
+  </div>
+  <script>
+    window.__timelines = window.__timelines || {};
+    const tl = gsap.timeline({ paused: true });
+    tl.from("#paths-eyebrow, #paths-title", { y: 28, opacity: 0, duration: .5, stagger: .12, ease: "power3.out" }, .2)
+      .from("#paths-origin", { scale: 0, opacity: 0, duration: .4, ease: "back.out(1.6)" }, 1.1)
+      .from("#boundary-path", { scaleX: 0, duration: .65, ease: "power2.out" }, 1.65)
+      .from("#boundary-result", { x: 55, opacity: 0, duration: .5, ease: "power3.out" }, 2.25)
+      .from("#fatigue-path", { scaleX: 0, duration: .65, ease: "power2.out" }, 3.45)
+      .from("#fatigue-result", { x: 55, opacity: 0, duration: .5, ease: "power3.out" }, 4.05)
+      .to("#boundary-result", { scale: 1.035, duration: .28, ease: "power2.out" }, 5.35)
+      .to("#boundary-result", { scale: 1, duration: .28, ease: "power2.in" }, 5.63);
+    window.__timelines["two-path-diagnosis-dark-v1"] = tl;
+  </script>
+</body>
+</html>

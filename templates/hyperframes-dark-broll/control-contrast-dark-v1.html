@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="zh-CN" data-composition-variables='[{"id":"eyebrow","type":"string","label":"Eyebrow","default":"错位的消耗"},{"id":"title","type":"string","label":"Title","default":"原因与行动，放错了位置"},{"id":"left_label","type":"string","label":"Left label","default":"不可控"},{"id":"left_title","type":"string","label":"Left title","default":"反复找原因"},{"id":"left_detail","type":"string","label":"Left detail","default":"解释越绕越远，行动仍停在原地"},{"id":"right_label","type":"string","label":"Right label","default":"可控"},{"id":"right_title","type":"string","label":"Right title","default":"不断找借口"},{"id":"right_detail","type":"string","label":"Right detail","default":"动作就在眼前，却被挡住"},{"id":"blocker_label","type":"string","label":"Blocker","default":"借口"}]'>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=1920, height=1080" />
+  <title>Control Contrast Dark B-roll</title>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+  <link rel="stylesheet" href="shared.css" />
+  <style>
+    .columns { position:absolute; left:0; right:0; top:260px; display:grid; grid-template-columns:1fr 1fr; gap:54px; }
+    .side { height:330px; padding:40px 46px; }
+    .side h2 { margin:12px 0 18px; font-size:46px; }
+    .search-loop { position:absolute; width:150px; height:150px; right:42px; bottom:34px; border:8px dashed #f4b860; border-radius:50%; }
+    .blocker { position:absolute; right:40px; bottom:46px; width:175px; height:82px; border:5px solid #f4b860; border-radius:18px; display:grid; place-items:center; color:#f4b860; font-size:30px; font-weight:800; transform:rotate(-4deg); }
+    .energy { position:absolute; left:0; right:0; top:650px; height:52px; border:3px solid rgba(255,253,248,.3); border-radius:999px; padding:7px; }
+    .energy-fill { width:100%; height:100%; border-radius:999px; background:#67e8c7; transform-origin:left center; }
+  </style>
+</head>
+<body>
+  <div id="contrast-root" class="root" data-composition-id="control-contrast-dark-v1" data-start="0" data-width="1920" data-height="1080" data-duration="7">
+    <section id="contrast-scene" class="clip" data-start="0" data-duration="7" data-track-index="1">
+      <div class="stage"><div class="grain"></div></div>
+      <main class="content">
+        <div id="contrast-eyebrow" class="eyebrow" data-var-text="eyebrow">错位的消耗</div>
+        <h1 id="contrast-title" data-var-text="title">原因与行动，放错了位置</h1>
+        <div class="columns">
+          <article id="uncontrolled-card" class="side card"><div class="label" data-var-text="left_label">不可控</div><h2 data-var-text="left_title">反复找原因</h2><div class="body" data-var-text="left_detail">解释越绕越远，行动仍停在原地</div><div id="search-loop" class="search-loop"></div></article>
+          <article id="controlled-card" class="side card"><div class="label" data-var-text="right_label">可控</div><h2 data-var-text="right_title">不断找借口</h2><div class="body" data-var-text="right_detail">动作就在眼前，却被挡住</div><div id="blocker" class="blocker" data-var-text="blocker_label">借口</div></article>
+        </div>
+        <div class="energy"><div id="energy-fill" class="energy-fill"></div></div>
+      </main>
+    </section>
+  </div>
+  <script>
+    window.__timelines = window.__timelines || {};
+    const tl = gsap.timeline({ paused: true });
+    tl.from("#contrast-eyebrow, #contrast-title", { y: 28, opacity: 0, duration: .5, stagger: .12, ease: "power3.out" }, .2)
+      .from("#uncontrolled-card", { x: -70, opacity: 0, duration: .55, ease: "power3.out" }, 1.2)
+      .from("#search-loop", { scale: .25, opacity: 0, rotation: -40, duration: .65, ease: "back.out(1.5)" }, 2.0)
+      .to("#energy-fill", { scaleX: .66, backgroundColor: "#f4b860", duration: .6, ease: "power2.out" }, 2.7)
+      .from("#controlled-card", { x: 70, opacity: 0, duration: .55, ease: "power3.out" }, 3.5)
+      .from("#blocker", { y: -45, opacity: 0, rotation: 6, duration: .55, ease: "back.out(1.6)" }, 4.25)
+      .to("#energy-fill", { scaleX: .22, backgroundColor: "#ef8d76", duration: .75, ease: "power2.inOut" }, 5.0);
+    window.__timelines["control-contrast-dark-v1"] = tl;
+  </script>
+</body>
+</html>

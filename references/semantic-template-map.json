@@ -1,0 +1,393 @@
+{
+  "schema_version": "0.1",
+  "method": "article-derived-semantic-routing",
+  "scanned_at": "2026-08-30",
+  "canonical_structures": [
+    "comparison",
+    "aggregation",
+    "filtering",
+    "hierarchy",
+    "causality",
+    "replacement",
+    "expansion"
+  ],
+  "structures": [
+    {
+      "id": "comparison",
+      "label": "对比",
+      "question": "两个或多个对象、路径或状态有什么差异？",
+      "aliases": ["contrast", "before-after", "versus", "uncontrollable-vs-controllable-contrast", "true-boundary-vs-temporary-fatigue"],
+      "local_template_ids": ["control-contrast-dark-v1", "two-path-diagnosis-dark-v1"],
+      "external_candidates": [
+        {
+          "id": "shotcraft-before-after-slider",
+          "repository": "video-shotcraft",
+          "path": "references/shots/data/before-after-slider-scrub.md",
+          "material_types": ["verified-media", "no-material"],
+          "presentation_types": ["verified-media", "infographic"],
+          "semantic_fit": "同一对象的处理前后或旧新状态对比。",
+          "skeleton": {
+            "element_relation": "两版内容同位叠放",
+            "main_motion": "分割杆扫过并揭示另一状态",
+            "phase_order": ["建立处理前", "快速揭示处理后", "慢扫证明差异", "定格结论"]
+          },
+          "license": "Apache-2.0",
+          "status": "port-required"
+        },
+        {
+          "id": "shotcraft-quad-parallel",
+          "repository": "video-shotcraft",
+          "path": "references/shots/rhythm/quad-split-parallel-scenes.md",
+          "material_types": ["verified-media", "no-material"],
+          "presentation_types": ["verified-media", "infographic"],
+          "semantic_fit": "多个方案或情境需要同时并列观察。",
+          "skeleton": {
+            "element_relation": "等权分屏并列",
+            "main_motion": "各分屏同步或错峰推进",
+            "phase_order": ["建立共同问题", "并列展示各对象", "同步比较", "高亮关键差异"]
+          },
+          "license": "Apache-2.0",
+          "status": "port-required"
+        }
+      ]
+    },
+    {
+      "id": "aggregation",
+      "label": "聚合",
+      "question": "多个来源如何汇聚成一个结果或入口？",
+      "aliases": ["merge", "converge", "integration", "many-to-one"],
+      "local_template_ids": [],
+      "external_candidates": [
+        {
+          "id": "shotcraft-bezier-converge",
+          "repository": "video-shotcraft",
+          "path": "references/shots/ui-entrance/bezier-source-converge-merge.md",
+          "material_types": ["no-material"],
+          "presentation_types": ["infographic"],
+          "semantic_fit": "多个来源统一接入同一个汇聚点。",
+          "skeleton": {
+            "element_relation": "多源节点连接单一中心",
+            "main_motion": "节点沿贝塞尔路径滑向中心并被吸收",
+            "phase_order": ["建立多源", "绘制连接", "沿线汇入", "只留统一结果"]
+          },
+          "license": "Apache-2.0",
+          "status": "port-required"
+        },
+        {
+          "id": "shotcraft-integration-hub",
+          "repository": "video-shotcraft",
+          "path": "references/shots/ui-entrance/integration-hub-map.md",
+          "material_types": ["verified-media", "no-material"],
+          "presentation_types": ["verified-media", "infographic"],
+          "semantic_fit": "一个平台连接多个应用或模块。",
+          "skeleton": {
+            "element_relation": "中心节点辐射连接外围节点",
+            "main_motion": "外围节点出现后管线连接到中心",
+            "phase_order": ["建立中心", "出现来源", "连接管线", "持续输送"]
+          },
+          "license": "Apache-2.0",
+          "status": "port-required"
+        },
+        {
+          "id": "shotcraft-avatar-radial-build",
+          "repository": "video-shotcraft",
+          "path": "references/shots/data/avatar-grid-radial-build-colorize.md",
+          "material_types": ["verified-media", "no-material"],
+          "presentation_types": ["verified-media", "infographic"],
+          "semantic_fit": "大量个体或样本聚成群体结论。",
+          "skeleton": {
+            "element_relation": "多个同类单元组成整体阵列",
+            "main_motion": "单元从中心或按半径逐层建立",
+            "phase_order": ["出现核心样本", "向外扩充", "形成整体", "统一高亮"]
+          },
+          "license": "Apache-2.0",
+          "status": "port-required"
+        }
+      ]
+    },
+    {
+      "id": "filtering",
+      "label": "筛选",
+      "question": "如何从多个候选中排除干扰并保留目标？",
+      "aliases": ["selection", "search", "focus", "elimination"],
+      "local_template_ids": [],
+      "external_candidates": [
+        {
+          "id": "shotcraft-type-and-filter",
+          "repository": "video-shotcraft",
+          "path": "references/shots/interaction/type-and-filter.md",
+          "material_types": ["verified-media"],
+          "presentation_types": ["verified-media"],
+          "semantic_fit": "真实界面的搜索、筛选和进入详情操作。",
+          "skeleton": {
+            "element_relation": "搜索条件控制候选网格",
+            "main_motion": "输入后非目标退场，目标归位并进入详情",
+            "phase_order": ["输入条件", "系统响应", "排除非目标", "确认目标"]
+          },
+          "license": "Apache-2.0",
+          "status": "port-required"
+        },
+        {
+          "id": "shotcraft-chip-single-select",
+          "repository": "video-shotcraft",
+          "path": "references/shots/interaction/chip-grid-single-select-blackout.md",
+          "material_types": ["verified-media", "no-material"],
+          "presentation_types": ["verified-media", "infographic"],
+          "semantic_fit": "多个选项中保留一个，并展示选中后的结果。",
+          "skeleton": {
+            "element_relation": "等权候选围绕单一选中项",
+            "main_motion": "目标反黑，其余降级并退场",
+            "phase_order": ["展示候选", "执行选择", "弱化其余", "展开选中结果"]
+          },
+          "license": "Apache-2.0",
+          "status": "port-required"
+        },
+        {
+          "id": "shotcraft-scanline-focus",
+          "repository": "video-shotcraft",
+          "path": "references/shots/effects/scanline-annotate-focus.md",
+          "material_types": ["verified-media"],
+          "presentation_types": ["verified-media"],
+          "semantic_fit": "从一张复杂截图或图像中定位重点区域。",
+          "skeleton": {
+            "element_relation": "完整素材包含一个目标区域",
+            "main_motion": "扫描线经过后锁定并标注目标",
+            "phase_order": ["展示全貌", "扫描查找", "锁定目标", "补充说明"]
+          },
+          "license": "Apache-2.0",
+          "status": "port-required"
+        }
+      ]
+    },
+    {
+      "id": "hierarchy",
+      "label": "层级",
+      "question": "哪些信息属于上层、下层、核心或从属部分？",
+      "aliases": ["parent-child", "levels", "priority", "structure"],
+      "local_template_ids": [],
+      "external_candidates": [
+        {
+          "id": "shotcraft-progressive-card",
+          "repository": "video-shotcraft",
+          "path": "references/shots/ui-entrance/product-card-progressive-assemble.md",
+          "material_types": ["verified-media", "no-material"],
+          "presentation_types": ["verified-media", "infographic"],
+          "semantic_fit": "按主图、标题、属性和细节逐级建立信息卡。",
+          "skeleton": {
+            "element_relation": "一个主容器包含多级字段",
+            "main_motion": "字段按信息层级逐层落位",
+            "phase_order": ["建立主体", "加入一级信息", "加入二级信息", "强调关键字段"]
+          },
+          "license": "Apache-2.0",
+          "status": "port-required"
+        },
+        {
+          "id": "shotcraft-title-demote",
+          "repository": "video-shotcraft",
+          "path": "references/shots/typography/title-demote-to-label.md",
+          "material_types": ["no-material", "text-only"],
+          "presentation_types": ["infographic", "text-motion"],
+          "semantic_fit": "主标题降为上级标签，让下一级内容成为当前焦点。",
+          "skeleton": {
+            "element_relation": "父级标题与子级内容主次转换",
+            "main_motion": "大标题缩小归位，新内容接管中心",
+            "phase_order": ["建立父级", "父级让位", "出现子级", "稳定新层级"]
+          },
+          "license": "Apache-2.0",
+          "status": "port-required"
+        },
+        {
+          "id": "shotcraft-research-stack",
+          "repository": "video-shotcraft",
+          "path": "references/shots/ui-entrance/research-card-stack-scroll.md",
+          "material_types": ["verified-media", "no-material"],
+          "presentation_types": ["verified-media", "infographic"],
+          "semantic_fit": "主卡与次级卡片形成明确的前后层次。",
+          "skeleton": {
+            "element_relation": "主卡在前，次级卡在后形成深度层级",
+            "main_motion": "卡片堆叠并按阅读顺序滚动",
+            "phase_order": ["建立主卡", "补充次级卡", "层级滚动", "回到当前重点"]
+          },
+          "license": "Apache-2.0",
+          "status": "port-required"
+        }
+      ]
+    },
+    {
+      "id": "causality",
+      "label": "因果",
+      "question": "哪个动作、条件或选择触发了什么结果？",
+      "aliases": ["cause-effect", "trigger-result", "condition-action", "quote-to-action", "constraint-and-agency"],
+      "local_template_ids": ["quote-to-action-dark-v1", "constraint-agency-dark-v1"],
+      "external_candidates": [
+        {
+          "id": "shotcraft-input-trigger",
+          "repository": "video-shotcraft",
+          "path": "references/shots/interaction/input-trigger-moves.md",
+          "material_types": ["verified-media"],
+          "presentation_types": ["verified-media"],
+          "semantic_fit": "一次点击或按键明确触发后续状态。",
+          "skeleton": {
+            "element_relation": "输入动作连接产品反馈",
+            "main_motion": "光标或键帽动作成为结果出现的扳机",
+            "phase_order": ["建立可操作对象", "执行输入", "即时反馈", "展示结果"]
+          },
+          "license": "Apache-2.0",
+          "status": "port-required"
+        },
+        {
+          "id": "shotcraft-theme-ripple-cause",
+          "repository": "video-shotcraft",
+          "path": "references/shots/interaction/theme-switch-moves.md",
+          "material_types": ["verified-media", "no-material"],
+          "presentation_types": ["verified-media", "infographic"],
+          "semantic_fit": "命令或选择从触发点向外传播并改变整个系统。",
+          "skeleton": {
+            "element_relation": "局部触发点控制全局状态",
+            "main_motion": "触发点收缩后涟漪扩散产生结果",
+            "phase_order": ["输入命令", "确认触发点", "效果向外传播", "全局状态落定"]
+          },
+          "license": "Apache-2.0",
+          "status": "port-required"
+        },
+        {
+          "id": "shotcraft-chip-select-result",
+          "repository": "video-shotcraft",
+          "path": "references/shots/interaction/chip-grid-single-select-blackout.md",
+          "material_types": ["verified-media", "no-material"],
+          "presentation_types": ["verified-media", "infographic"],
+          "semantic_fit": "选择一个条件后计算或结论随之出现。",
+          "skeleton": {
+            "element_relation": "选项与结果一对一连接",
+            "main_motion": "选中项上移后下方结果展开",
+            "phase_order": ["展示条件", "选中条件", "收束干扰项", "出现结果"]
+          },
+          "license": "Apache-2.0",
+          "status": "port-required"
+        }
+      ]
+    },
+    {
+      "id": "replacement",
+      "label": "替换",
+      "question": "同一个位置、对象或系统如何从旧状态变为新状态？",
+      "aliases": ["transform", "switch", "morph", "upgrade"],
+      "local_template_ids": [],
+      "external_candidates": [
+        {
+          "id": "shotcraft-theme-switch",
+          "repository": "video-shotcraft",
+          "path": "references/shots/interaction/theme-switch-moves.md",
+          "material_types": ["verified-media", "no-material"],
+          "presentation_types": ["verified-media", "infographic"],
+          "semantic_fit": "同一布局从一种主题或状态切换到另一种。",
+          "skeleton": {
+            "element_relation": "旧新状态完全同位",
+            "main_motion": "边界扫过处就地换肤",
+            "phase_order": ["建立旧状态", "启动替换边界", "逐区替换", "新状态坐实"]
+          },
+          "license": "Apache-2.0",
+          "status": "port-required"
+        },
+        {
+          "id": "shotcraft-ui-brand-morph",
+          "repository": "video-shotcraft",
+          "path": "references/shots/outro/ui-to-brand-morph.md",
+          "material_types": ["verified-media", "no-material"],
+          "presentation_types": ["verified-media", "infographic"],
+          "semantic_fit": "一个已知 UI 元素变形成新的品牌或结论符号。",
+          "skeleton": {
+            "element_relation": "旧实体与新实体共享位置或几何来源",
+            "main_motion": "旧实体压缩或拆解后重组为新实体",
+            "phase_order": ["建立旧实体", "压缩到交换点", "重组新实体", "补全新标识"]
+          },
+          "license": "Apache-2.0",
+          "status": "port-required"
+        },
+        {
+          "id": "shotcraft-primitive-morph",
+          "repository": "video-shotcraft",
+          "path": "references/shots/ui-entrance/morph-from-primitive.md",
+          "material_types": ["no-material"],
+          "presentation_types": ["infographic"],
+          "semantic_fit": "基础图元变成完整容器或功能对象。",
+          "skeleton": {
+            "element_relation": "一个基础图元对应一个复杂终态",
+            "main_motion": "图元连续变形并补齐内部结构",
+            "phase_order": ["建立原始图元", "改变外形", "补充内部元素", "完整对象落定"]
+          },
+          "license": "Apache-2.0",
+          "status": "port-required"
+        }
+      ]
+    },
+    {
+      "id": "expansion",
+      "label": "展开",
+      "question": "一个概念、清单或步骤如何逐项展开？",
+      "aliases": ["reveal", "steps", "list", "progressive-disclosure"],
+      "local_template_ids": [],
+      "external_candidates": [
+        {
+          "id": "shotcraft-list-reveal",
+          "repository": "video-shotcraft",
+          "path": "references/shots/ui-entrance/list-reveal.md",
+          "material_types": ["no-material", "text-only"],
+          "presentation_types": ["infographic", "text-motion"],
+          "semantic_fit": "多个并列项目按口播顺序逐项出现。",
+          "skeleton": {
+            "element_relation": "一个容器包含按序排列的同级项目",
+            "main_motion": "项目错峰找位，容器持续轻微漂移",
+            "phase_order": ["建立主题", "逐项出现", "保持已出现项", "完整清单落定"]
+          },
+          "license": "Apache-2.0",
+          "status": "port-required"
+        },
+        {
+          "id": "shotcraft-brace-expand",
+          "repository": "video-shotcraft",
+          "path": "references/shots/typography/brace-expand.md",
+          "material_types": ["text-only"],
+          "presentation_types": ["text-motion"],
+          "semantic_fit": "一个关键词或符号展开成一句核心结论。",
+          "skeleton": {
+            "element_relation": "两侧边界包住中央内容",
+            "main_motion": "边界向外撑开并揭示内容",
+            "phase_order": ["建立符号", "向外展开", "揭示文字", "轻微松弛落定"]
+          },
+          "license": "Apache-2.0",
+          "status": "port-required"
+        },
+        {
+          "id": "shotcraft-progressive-assemble",
+          "repository": "video-shotcraft",
+          "path": "references/shots/ui-entrance/product-card-progressive-assemble.md",
+          "material_types": ["verified-media", "no-material"],
+          "presentation_types": ["verified-media", "infographic"],
+          "semantic_fit": "一个对象的组成部分或步骤连续补全。",
+          "skeleton": {
+            "element_relation": "多个字段依附同一主体",
+            "main_motion": "字段按讲述顺序逐个落位",
+            "phase_order": ["建立主体", "补充关键字段", "展开细节", "高亮结论"]
+          },
+          "license": "Apache-2.0",
+          "status": "port-required"
+        }
+      ]
+    }
+  ],
+  "unindexed_fallbacks": [
+    {
+      "repository": "hyperframes-launches",
+      "root": "research/reference-repos/hyperframes-launches",
+      "license": "not-detected",
+      "usage_policy": "structure-study-only-until-license-verified"
+    },
+    {
+      "repository": "vibe-motion-skills",
+      "root": "research/reference-repos/vibe-motion-skills",
+      "license": "not-detected-at-repository-root",
+      "usage_policy": "inspect-per-skill-license-before-reuse"
+    }
+  ]
+}
