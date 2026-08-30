@@ -96,11 +96,6 @@ def main() -> int:
     )
     skill_templates = Path(__file__).resolve().parents[1] / "templates"
     shutil.copy2(skill_templates / "template-index.json", templates_dir / "template-index.json")
-    shutil.copytree(
-        skill_templates / "hyperframes-dark-broll",
-        templates_dir / "hyperframes-dark-broll",
-        dirs_exist_ok=False,
-    )
     print(json.dumps({"status": "created", "project_dir": str(args.project_dir)}, ensure_ascii=False))
     return 0
 

@@ -17,7 +17,7 @@
       "label": "对比",
       "question": "两个或多个对象、路径或状态有什么差异？",
       "aliases": ["contrast", "before-after", "versus", "uncontrollable-vs-controllable-contrast", "true-boundary-vs-temporary-fatigue"],
-      "local_template_ids": ["control-contrast-dark-v1", "two-path-diagnosis-dark-v1"],
+      "local_template_ids": [],
       "external_candidates": [
         {
           "id": "shotcraft-before-after-slider",
@@ -218,7 +218,7 @@
       "label": "因果",
       "question": "哪个动作、条件或选择触发了什么结果？",
       "aliases": ["cause-effect", "trigger-result", "condition-action", "quote-to-action", "constraint-and-agency"],
-      "local_template_ids": ["quote-to-action-dark-v1", "constraint-agency-dark-v1"],
+      "local_template_ids": [],
       "external_candidates": [
         {
           "id": "shotcraft-input-trigger",

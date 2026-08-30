@@ -26,8 +26,8 @@ metadata:
 2. 运行 `python scripts/preflight.py --srt <path> --audio <path> --out-dir <project>/planning`。
 3. 有参考图时先登记 `input/references/index.json`，再运行 `python scripts/validate_references.py --index ... [--character-bible ...]`。
 4. 做内容分析和分镜前读 [references/directing.md](references/directing.md)。
-5. B-roll 映射前读 [references/semantic-template-mapping.md](references/semantic-template-mapping.md)。视觉计划完成后运行 `scripts/validate_plan.py`，再用 `scripts/render_plan_markdown.py` 重生派生视图；运行 `scripts/validate_template_index.py` 与 `scripts/validate_semantic_map.py` 后，B-roll 逐镜运行 `scripts/select_broll_template.py`，先匹配本地模板。
-6. 本地无匹配且外部案例确实能节省工作时，读取 [references/external-broll-sources.json](references/external-broll-sources.json)，先做许可证和框架门控，再研究动效骨架。
+5. B-roll 映射前读 [references/semantic-template-mapping.md](references/semantic-template-mapping.md)。视觉计划完成后运行 `scripts/validate_plan.py`，再用 `scripts/render_plan_markdown.py` 重生派生视图；运行 `scripts/validate_template_index.py` 与 `scripts/validate_semantic_map.py` 后，B-roll 逐镜运行 `scripts/select_broll_template.py`。只有具备预览、来源、适配度和明确质量批准的本地模板才允许命中；原型或未批准模板不得为“本地优先”而自动选用。
+6. 没有合格本地模板且外部案例确实能节省工作时，读取 [references/external-broll-sources.json](references/external-broll-sources.json)，先做许可证和框架门控，再研究动效骨架。
 7. 审核、样片和交付前读 [references/qa.md](references/qa.md)，并运行 `scripts/validate_state.py` 检查批准哈希和过期状态。
 8. 进入视频实现阶段时，先读 `hyperframes` Skill；随后按需读取 `hyperframes-core`、`hyperframes-animation`、`hyperframes-keyframes` 与 `hyperframes-cli`。以这些 Skill 的当前实现契约为准，不在本 Skill 中复制其底层 API。
 
@@ -106,7 +106,7 @@ python scripts/render_plan_markdown.py \
 
 ### 4. 资产与模板
 
-按真实依赖顺序生成资产：先人物或风格参考，再生成依赖它们的 A-roll；互不依赖的 B-roll 可以并行准备。B-roll 按 `verified-media / no-material / text-only` 路由，并按表现形式、语义结构、信息项数量、时长和画幅匹配本地模板。模板索引先通过 `scripts/validate_template_index.py`，语义目录通过 `scripts/validate_semantic_map.py`；随 Skill 提供的深色 B-roll HyperFrames 模板可运行 `npm run check` 统一复验。只有本地无合适模板时才从 `references/semantic-template-map.json` 取同结构候选；仍无候选才研究未索引仓库。复制或改造源码前记录来源、许可证、原框架和兼容性；未声明许可证的公开仓库只允许研究结构，不默认允许复制源码。
+按真实依赖顺序生成资产：先人物或风格参考，再生成依赖它们的 A-roll；互不依赖的 B-roll 可以并行准备。B-roll 按 `verified-media / no-material / text-only` 路由，并按表现形式、语义结构、信息项数量、时长和画幅匹配模板。模板索引先通过 `scripts/validate_template_index.py`，语义目录通过 `scripts/validate_semantic_map.py`。只有带可审阅预览、可追溯来源、明确动作阶段并得到质量批准的本地模板才可复用；否则从 `references/semantic-template-map.json` 取同结构外部候选，仍无候选才研究未索引仓库。复制或改造源码前记录来源、许可证、原框架和兼容性；未声明许可证的公开仓库只允许研究结构，不默认允许复制源码。
 
 每项资产记录提示词、模型、参数、版本、来源和校验结果。只重做未通过或已过期的资产；单纯调整文字、布局或时间轴时不要重新出图。
 
