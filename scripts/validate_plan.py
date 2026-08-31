@@ -154,7 +154,7 @@ def main() -> int:
         if role not in {"A", "B"}:
             errors.append(f"{shot.get('id')} screen_role 只能是 A 或 B")
         role_run.append(role)
-        if role == "A" and project.get("a_scene_mode") == "fixed-character-micro-scene":
+        if role == "A":
             if shot.get("a_view") not in {"presenter", "protagonist", "supporting", "first-person"}:
                 errors.append(f"{shot.get('id')} 缺少有效 a_view")
         if role == "B" and shot.get("screen_subtype") not in {
@@ -174,10 +174,22 @@ def main() -> int:
             item_count = shot.get("item_count")
             if not isinstance(item_count, int) or item_count <= 0:
                 errors.append(f"{shot.get('id')} item_count 必须为正整数")
-            template_id = shot.get("template_id")
-            if template_id and not str(template_id).startswith(("new:", "external-research:")):
+            template_id = str(shot.get("template_id") or "")
+            if shot.get("material_type") == "no-material" and shot.get("presentation_type") == "infographic" and not template_id:
+                errors.append(f"{shot.get('id')} 的无素材信息动效缺少 template_id")
+            if template_id and not template_id.startswith(("new:", "external-research:", "external:")):
                 if template_index and template_id not in template_ids:
                     errors.append(f"{shot.get('id')} template_id 不存在或已过期：{template_id}")
+            if template_id.startswith(("new:", "external:")):
+                expected_record = f"planning/broll-research/{shot.get('id')}.json"
+                if shot.get("broll_research_record") != expected_record:
+                    errors.append(
+                        f"{shot.get('id')} 使用 {template_id} 前必须填写 broll_research_record={expected_record}"
+                    )
+            if template_id.startswith("external-research:"):
+                production = shot.get("production") or {}
+                if production.get("asset_status") in {"in-progress", "ready"}:
+                    errors.append(f"{shot.get('id')} 外部研究尚未完成，不能标记为 {production.get('asset_status')}")
         if not shot.get("viewer_takeaway"):
             errors.append(f"{shot.get('id')} 缺少 viewer_takeaway")
         design = shot.get("visual_design") or {}
@@ -189,6 +201,35 @@ def main() -> int:
             at_ms = change.get("at_ms")
             if not isinstance(at_ms, int) or not shot["start_ms"] <= at_ms <= shot["end_ms"]:
                 errors.append(f"{shot.get('id')} 的变化时间 {at_ms} 超出镜头语义边界")
+            if not str(change.get("event") or change.get("description") or "").strip():
+                errors.append(f"{shot.get('id')} 的变化 {at_ms} 缺少事件描述")
+        if not shot.get("materials"):
+            errors.append(f"{shot.get('id')} 缺少 materials")
+        production = shot.get("production") or {}
+        if not str(production.get("primary_tool") or "").strip():
+            errors.append(f"{shot.get('id')} 缺少 production.primary_tool")
+        if (
+            role == "B"
+            and shot.get("material_type") == "no-material"
+            and shot.get("presentation_type") == "infographic"
+            and production.get("primary_tool") != "hyperframes"
+        ):
+            errors.append(f"{shot.get('id')} 的无素材信息动画必须由 hyperframes 作为 primary_tool")
+        fallback_tools = production.get("fallback_tools")
+        if not isinstance(fallback_tools, list):
+            errors.append(f"{shot.get('id')} production.fallback_tools 必须为数组")
+        asset_status = production.get("asset_status")
+        if asset_status not in {
+            "available",
+            "to-generate",
+            "in-progress",
+            "ready",
+            "failed",
+            "gap",
+        }:
+            errors.append(f"{shot.get('id')} 缺少有效 production.asset_status")
+        if asset_status in {"failed", "gap"} and not str(production.get("asset_gap") or "").strip():
+            errors.append(f"{shot.get('id')} 的素材状态为 {asset_status}，但没有说明 asset_gap")
 
     policy = project.get("timeline_policy") or {}
     expected_policy = {

@@ -61,6 +61,18 @@ def render(plan: dict) -> str:
                     f"- 具体模式：`{shot.get('semantic_pattern', '')}`",
                     f"- 信息项：{shot.get('item_count', '')}",
                     f"- 模板：`{shot.get('template_id') or 'none'}`",
+                    f"- B-roll 研究：`{shot.get('broll_research_record') or 'none'}`",
+                ]
+            )
+        production = shot.get("production") or {}
+        if production:
+            fallbacks = production.get("fallback_tools") or []
+            lines.extend(
+                [
+                    f"- 实现工具：`{production.get('primary_tool', '')}`",
+                    f"- 回退顺序：{' → '.join(str(item) for item in fallbacks) or '无'}",
+                    f"- 素材状态：`{production.get('asset_status', '')}`",
+                    f"- 素材缺口：{production.get('asset_gap') or '无'}",
                 ]
             )
         design = shot.get("visual_design") or {}
@@ -75,7 +87,7 @@ def render(plan: dict) -> str:
             ]
         )
         lines.extend(
-            f"- `{fmt_ms(change['at_ms'])}` {change.get('event', '')}"
+            f"- `{fmt_ms(change['at_ms'])}` {change.get('event') or change.get('description', '')}"
             for change in shot.get("changes") or []
         )
         lines.extend(["", f"风险：{'；'.join(shot.get('risk') or []) or '无'}", ""])

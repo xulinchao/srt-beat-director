@@ -19,10 +19,19 @@ project/
   planning/
     preflight-report.json
     preflight-report.md
+    project-inventory.json
+    project-inventory.md
     content-analysis.json
     content-analysis.md
     visual-plan.json
     visual-plan.md
+    template-selection/
+      <shot-id>.json
+      <shot-id>.md
+    broll-research/
+      <shot-id>.json
+    broll-research-validation.json
+    broll-research-validation.md
     plan-validation-report.json
     plan-validation-report.md
     material-requests.json
@@ -49,6 +58,8 @@ project/
   render/
     final.mp4
   reports/
+    timeline-audit.json
+    timeline-audit.md
     qa-report.json
     qa-report.md
     manifest.json
@@ -108,6 +119,9 @@ python scripts/validate_references.py \
   "inputs": {"srt": "input/source.srt", "audio": "input/narration.mp3"},
   "output": {"directory": "render", "filename": "final.mp4"},
   "video": {"aspect_ratio": "9:16", "width": 1080, "height": 1920, "fps": 30},
+  "primary_timeline": "chatcut",
+  "review_mode": "manual",
+  "chatcut": {"project_id": null, "project_name": null, "timeline_id": null},
   "a_scene_mode": "fixed-character-micro-scene",
   "subtitle_safe_area": {"bottom_fraction": 0.22},
   "timeline_policy": {
@@ -118,9 +132,9 @@ python scripts/validate_references.py \
   "sample": {"start_ms": 0, "end_ms": 45000},
   "status": {"plan": "draft", "visual_baseline": "pending", "sample": "pending"},
   "approvals": {
-    "plan": {"sha256": null, "approved_at": null},
-    "visual_baseline": {"sha256": null, "approved_at": null},
-    "sample": {"sha256": null, "approved_at": null}
+    "plan": {"sha256": null, "approved_at": null, "review_source": null},
+    "visual_baseline": {"sha256": null, "approved_at": null, "review_source": null},
+    "sample": {"sha256": null, "approved_at": null, "review_source": null}
   }
 }
 ```
@@ -128,6 +142,10 @@ python scripts/validate_references.py \
 允许值：
 
 - `a_scene_mode`：`fixed-character-micro-scene`、`full-ai-scene`；
+- `primary_timeline`：`chatcut`、`hyperframes`；用户指定 ChatCut 时不得因为部分 B-roll 使用 HyperFrames 而改写此字段；
+- `review_mode`：`manual`、`continuous`。`continuous` 只在用户明确要求自检后继续时使用，不等于预先批准计费、发布、账户或系统权限；
+- `review_source`：通过门控时记录 `user` 或 `agent-qa-under-user-authorization`。后者只允许在 `review_mode=continuous` 时使用；不得把代理自检记录成用户确认；
+- `chatcut`：仅在 ChatCut 路径使用。`project_id`、`timeline_id` 必须来自实际工具读取，不能凭名称猜测；
 - 各状态：`draft`、`pending`、`approved`、`stale`；
 - 修改影响内容或视觉基线的真源后，将下游状态标记为 `stale`。
 - 每次批准绑定当前真源或样片的 SHA-256；修改被绑定文件后，不能沿用旧批准。
@@ -189,7 +207,14 @@ python scripts/validate_references.py \
       "changes": [],
       "transition": {"from_previous": "", "to_next": ""},
       "materials": [],
+      "production": {
+        "primary_tool": "existing-media",
+        "fallback_tools": [],
+        "asset_status": "available",
+        "asset_gap": null
+      },
       "template_id": null,
+      "broll_research_record": null,
       "risk": [],
       "status": "draft"
     }
@@ -199,6 +224,14 @@ python scripts/validate_references.py \
 
 `screen_role` 只允许 `A` 或 `B`。A 的子类型由项目级主画面模式约束；B 的 `material_type` 使用 `verified-media`、`no-material` 或 `text-only`，`presentation_type` 使用 `verified-media`、`infographic` 或 `text-motion`。旧字段 `screen_subtype` 只保留画面实现类别，不能代替这两个映射字段。`start_ms` 和 `end_ms` 必须来自 SRT 边界。
 
+`production` 记录计划如何落实，不替代画面语义字段：
+
+- `primary_tool`：`existing-media`、`chatcut-image`、`chatcut-video`、`chatcut-motion-graphics`、`hyperframes` 或具体的其他可用工具；
+- `fallback_tools`：按失败后的真实尝试顺序列出，不能把无关静态图作为动态镜头的默认回退；
+- `asset_status`：`available`、`to-generate`、`in-progress`、`ready`、`failed`、`gap`；
+- `asset_gap`：没有缺口时为 `null`，有缺口时写清缺少什么、为什么无法继续该镜头和是否影响全片导出。
+- 当前标准流程中，`no-material + infographic` B-roll 的 `primary_tool` 必须为 `hyperframes`；ChatCut 只负责这些渲染结果的素材管理、时间线组装与导出。只有用户明确改变工具分工时才能使用其他主工具，并在计划中说明例外。
+
 连续三镜以上同一 `screen_role` 时，在计划根节点增加 `roll_run_exceptions`，逐段记录 `start_shot_id`、`end_shot_id`、`screen_role` 与非空 `reason`。理由必须说明为什么语义不可拆，以及连续镜头如何改变视角或信息结构；不能只写“节奏需要”。
 
 - A-roll 固定人物模式必须使用 `a_view`：`presenter`、`protagonist`、`supporting`、`first-person`；
@@ -206,7 +239,11 @@ python scripts/validate_references.py \
 - `semantic_structure` 只允许 `comparison`、`aggregation`、`filtering`、`hierarchy`、`causality`、`replacement`、`expansion`；交叉特征写入可选的 `secondary_structures`；
 - `semantic_pattern` 可写具体骨架模式，例如 `before-after-slider` 或 `true-boundary-vs-temporary-fatigue`；它用于同一主结构内排序，不能代替标准主结构；
 - B-roll 的 `materials` 必须能判断为现有已核实素材、待补素材或无需真实素材；
-- `template_id` 只能引用模板索引中存在且未过期的模板，或使用 `new:<id>` / `external-research:<structure>` 明确后续动作。
+- `template_id` 只能使用以下路由：合格本地模板 ID、`external-research:<structure>`、`external:<candidate-id>` 或 `new:<id>`。
+- `external-research:<structure>` 表示尚未完成研究，只能停留在规划状态，不能开始实现。
+- `external:<candidate-id>` 必须引用 `broll_research_record` 中已检查并选中的候选。
+- `new:<id>` 不是本地无匹配时的直接回退。只允许在 `broll_research_record` 的决策为 `custom-after-external-review`、目录候选均有拒绝理由且记录了借鉴的运动原则后使用。
+- `no-material + infographic` 没有合格本地模板时必须填写 `broll_research_record`，路径为 `planning/broll-research/<shot-id>.json`。详细契约见 [broll-external-research.md](broll-external-research.md)。
 
 ## 6. 模板索引
 
@@ -239,4 +276,6 @@ python scripts/validate_references.py \
 
 ## 7. Manifest
 
-最终 `manifest.json` 至少列出每个输入、真源、采用的提示词、资产、模板、工程文件、样片、成片和报告的相对路径、SHA-256、来源或生成方式、版本与状态。派生缓存可记录，但不能替代真源。
+最终 `manifest.json` 至少列出每个输入、真源、采用的提示词、B-roll 研究记录、资产、模板、工程文件、样片、成片和报告的相对路径、SHA-256、来源或生成方式、版本与状态。派生缓存可记录，但不能替代真源。
+
+ChatCut 路径的 manifest 还要记录项目 ID、成片时间线 ID、导出任务或结果、每个计划镜头对应的时间线素材实例，以及 HyperFrames 渲染文件导入后的 ChatCut asset ID。`reports/timeline-audit.json` 逐镜比较 `visual-plan.json` 与实际时间线；仅有本地渲染文件但未导入或未放置，不算镜头已落实。

@@ -48,8 +48,17 @@ def main() -> int:
     input_dir = args.project_dir / "input"
     config_dir = args.project_dir / "config"
     planning_dir = args.project_dir / "planning"
+    template_selection_dir = planning_dir / "template-selection"
+    broll_research_dir = planning_dir / "broll-research"
     templates_dir = args.project_dir / "templates"
-    for directory in (input_dir, config_dir, planning_dir, templates_dir):
+    for directory in (
+        input_dir,
+        config_dir,
+        planning_dir,
+        template_selection_dir,
+        broll_research_dir,
+        templates_dir,
+    ):
         directory.mkdir(parents=True, exist_ok=True)
 
     shutil.copy2(args.srt, input_dir / "source.srt")

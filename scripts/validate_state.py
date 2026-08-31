@@ -39,6 +39,27 @@ def validate(project_dir: Path) -> dict:
     visual = load(visual_path) if visual_path.is_file() else {}
     statuses = project.get("status") or {}
     approvals = project.get("approvals") or {}
+    review_mode = str(project.get("review_mode", "manual"))
+
+    def validate_review_source(label: str, approval: dict) -> None:
+        source = approval.get("review_source")
+        if source not in {"user", "agent-qa-under-user-authorization"}:
+            errors.append(f"{label} 已批准，但缺少有效 review_source")
+        if source == "agent-qa-under-user-authorization" and review_mode != "continuous":
+            errors.append(f"{label} 使用代理自检来源，但 review_mode 不是 continuous")
+
+    plan_status = str(statuses.get("plan", ""))
+    plan_approval = approvals.get("plan") or {}
+    plan_path = project_dir / "planning" / "visual-plan.json"
+    if plan_status == "approved":
+        approved_plan_hash = plan_approval.get("sha256")
+        if not approved_plan_hash:
+            errors.append("视觉计划状态为 approved，但没有批准 SHA-256")
+        elif not plan_path.is_file():
+            errors.append("视觉计划状态为 approved，但 visual-plan.json 不存在")
+        elif sha256(plan_path) != approved_plan_hash:
+            errors.append("视觉计划批准 SHA-256 与 visual-plan.json 不一致")
+        validate_review_source("视觉计划", plan_approval)
 
     baseline_status = str(statuses.get("visual_baseline", ""))
     baseline_approval = approvals.get("visual_baseline") or {}
@@ -52,6 +73,7 @@ def validate(project_dir: Path) -> dict:
             errors.append("视觉基线状态为 approved，但 candidate review 不存在")
         elif approved_baseline_hash and sha256(candidate_path) != approved_baseline_hash:
             errors.append("视觉基线批准 SHA-256 与 candidate review 不一致")
+        validate_review_source("视觉基线", baseline_approval)
     elif approved_baseline_hash:
         warnings.append("视觉基线未批准，但仍保留非空批准 SHA-256")
 
@@ -67,6 +89,7 @@ def validate(project_dir: Path) -> dict:
             errors.append(f"样片文件不存在：{sample_artifact}")
         elif sha256(project_dir / sample_artifact) != sample_approval.get("sha256"):
             errors.append("样片批准 SHA-256 与文件不一致")
+        validate_review_source("样片", sample_approval)
 
     manifests = list((project_dir / "hyperframes").glob("**/manifest.json")) if (project_dir / "hyperframes").exists() else []
     for manifest_path in manifests:

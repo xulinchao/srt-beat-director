@@ -7,8 +7,8 @@
 3. B-roll 判断 `material_type`：`verified-media`、`no-material` 或 `text-only`。
 4. 判断一个主 `semantic_structure`：`comparison`、`aggregation`、`filtering`、`hierarchy`、`causality`、`replacement`、`expansion`；再用 `semantic_pattern` 描述具体骨架模式。
 5. 用主结构找到候选族，再用具体模式、信息项数量、时长、画幅匹配 `templates/template-index.json`。
-6. 本地没有合适模板时，查询 `semantic-template-map.json` 中同结构的外部候选；只研究候选的元素关系、主要运动和阶段顺序。
-7. 输出候选与最小改造范围，用户确认后才实现或移植。
+6. 本地没有合适模板时，强制查询 `semantic-template-map.json` 中同结构的外部候选；读取具体镜头卡，`port-required` 候选还要读取实现文件。
+7. 输出候选与最小改造范围，按项目审核模式确认或自检后实现或移植。候选均不适合时必须记录逐项拒绝理由，不能直接从零创建 SVG。
 
 ## 七类结构的判定边界
 

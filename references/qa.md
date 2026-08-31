@@ -42,6 +42,9 @@
 - 文字、数字和关系是否与口播一致；
 - 真实素材有来源，生成素材有提示词、模型、参数和版本；
 - 目标画幅内无裁切、溢出或字幕区冲突。
+- `no-material + infographic` B-roll 在没有合格本地模板时，存在通过校验的 `planning/broll-research/<shot-id>.json`；
+- 外部候选落实到具体镜头卡和实现文件；选择自建时，每个候选都有拒绝理由和可追溯的运动原则；
+- 静态 SVG 只作为动画组件使用，不单独充当已完成 B-roll；完成动效至少有三个有效阶段、可审阅预览和实际渲染结果。
 
 失败资产标记为 `stale` 或 `rejected`。通过文件哈希复用，不因布局或文字微调重新生成。
 
@@ -56,7 +59,7 @@
 - 长镜头有内容驱动的状态变化，短镜头没有被压缩到读不清；
 - 音画节奏和切换方式可代表全片。
 
-用户确认样片后记录样片文件、视觉计划和视觉基线的哈希。任一关键真源变化后，样片状态变为 `stale`。
+`review_mode=manual` 时，用户确认样片后记录样片文件、视觉计划和视觉基线的哈希。`review_mode=continuous` 时，代理完成同一组检查、修复并记录 `review_source=agent-qa-under-user-authorization` 后继续；不得写成“用户已确认”。任一关键真源变化后，样片状态变为 `stale`。
 
 运行 `scripts/validate_state.py`。历史 QA 报告若绑定已作废视觉基线，只能保留为历史证据；不得继续显示为当前“已批准”。
 
@@ -71,4 +74,13 @@
 - 所有缺失素材、保留意见和已知限制在 QA 报告中明确列出；
 - `manifest.json` 能定位并校验全部输入、真源、资产、工程、报告和最终 MP4。
 
-最终交付至少包含：HyperFrames 源工程、`timeline.json`、最终 MP4、`qa-report.json/.md` 和 `manifest.json`。除非用户明确要求，不烧录字幕，不添加 BGM、复杂音效或非必要 3D 动画。
+ChatCut 主时间线路径另检查：
+
+- 活动项目 ID 与 `config/project.json` 一致；
+- 成片使用保留原版本后的明确时间线，时间线 ID 已记录；
+- `visual-plan.json` 中每个镜头都能映射到实际时间线素材实例和准确时间范围；
+- 标为 B-roll 的镜头确实使用图解、动效、截图、录屏或信息文字，不由装饰性 A-roll 静态图占位；
+- HyperFrames 渲染结果已成为 ChatCut 素材并实际放置，而不是只存在于本地目录；
+- 最终 MP4 由 ChatCut Desktop 导出，且导出文件存在、非空、时长合理。
+
+最终交付至少包含：最终 MP4、`qa-report.json/.md` 和 `manifest.json`。使用 HyperFrames 时保留对应源工程和渲染文件；使用 ChatCut 时另保留 `timeline-audit.json/.md`。除非用户明确要求，不烧录字幕，不添加 BGM、复杂音效或非必要 3D 动画。

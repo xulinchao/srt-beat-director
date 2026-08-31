@@ -48,8 +48,14 @@ def validate(index_path: Path) -> dict:
         source = template.get("source") or {}
         if not source.get("license"):
             errors.append(f"{template_id} 缺少 source.license")
-        if status == "animation-verified" and str(source_file).lower().endswith(".svg"):
-            warnings.append(f"{template_id} 标记 animation-verified，但 source_file 仍是静态 SVG")
+        if status == "animation-verified":
+            if str(source_file).lower().endswith(".svg"):
+                errors.append(f"{template_id} 标记 animation-verified，但 source_file 仍是静态 SVG")
+            if not template.get("preview"):
+                errors.append(f"{template_id} 标记 animation-verified，但缺少 preview")
+            phases = template.get("animation_phases")
+            if not isinstance(phases, list) or len(phases) < 3:
+                errors.append(f"{template_id} 标记 animation-verified，但 animation_phases 少于三个")
 
     return {
         "schema_version": "0.1",

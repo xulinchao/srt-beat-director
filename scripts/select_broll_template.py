@@ -30,15 +30,15 @@ def load(path: Path) -> dict:
         return json.load(handle)
 
 
-def readiness(status: str) -> tuple[int, bool]:
+def readiness(status: str) -> tuple[int, bool, bool]:
     value = status.lower()
     if "superseded" in value or value == "stale":
-        return (-1000, True)
+        return (-1000, True, False)
     if "animation-verified" in value or value == "verified":
-        return (30, False)
+        return (30, False, True)
     if "implementation-required" in value:
-        return (10, True)
-    return (0, True)
+        return (10, True, False)
+    return (0, True, False)
 
 
 def resolve_structure(mapping: dict | None, value: str) -> dict | None:
@@ -83,9 +83,19 @@ def select(
             continue
         if aspect_ratio not in aspect_ratios:
             continue
-        bonus, implementation_required = readiness(str(template.get("hyperframes_status", "")))
+        bonus, implementation_required, status_qualified = readiness(
+            str(template.get("hyperframes_status", ""))
+        )
         if bonus <= -1000:
             continue
+        animation_phases = template.get("animation_phases") or []
+        source_file = str(template.get("source_file") or "")
+        qualified_for_reuse = (
+            status_qualified
+            and bool(template.get("preview"))
+            and len(animation_phases) >= 3
+            and not source_file.lower().endswith(".svg")
+        )
         span_penalty = (item_range[1] - item_range[0]) + (duration_range[1] - duration_range[0]) / 10000
         semantic_bonus = 60 if exact_pattern_match else (40 if exact_semantic_match else 15)
         score = round(100 + semantic_bonus + bonus - span_penalty, 3)
@@ -94,17 +104,19 @@ def select(
                 "template_id": template.get("id"),
                 "score": score,
                 "implementation_required": implementation_required,
+                "qualified_for_reuse": qualified_for_reuse,
                 "hyperframes_status": template.get("hyperframes_status"),
                 "source_file": template.get("source_file"),
-                "animation_phases": template.get("animation_phases") or [],
+                "animation_phases": animation_phases,
                 "known_limits": template.get("known_limits") or [],
             }
         )
     candidates.sort(key=lambda candidate: (-candidate["score"], candidate["template_id"] or ""))
+    qualified_candidates = [candidate for candidate in candidates if candidate["qualified_for_reuse"]]
 
-    if candidates:
+    if qualified_candidates:
         status = "local-match"
-        selected = candidates[0]
+        selected = qualified_candidates[0]
         external = []
         external_candidates = []
     else:
@@ -132,6 +144,8 @@ def select(
                     }
                 )
 
+    required_reviews = min(2, len(external_candidates))
+
     return {
         "schema_version": "0.1",
         "status": status,
@@ -149,6 +163,9 @@ def select(
         "local_candidates": candidates,
         "external_sources": external,
         "external_candidates": external_candidates,
+        "required_external_candidate_reviews": required_reviews,
+        "custom_build_allowed": status == "external-research-required" and not external_candidates,
+        "research_record_required_before_implementation": status == "external-research-required" and bool(external_candidates),
         "confirmation_required_before_implementation": True,
     }
 
@@ -162,6 +179,11 @@ def markdown(report: dict) -> str:
             f"- 状态：`{selected['hyperframes_status']}`"
         )
     else:
+        prototype_lines = [
+            f"- `{item['template_id']}`：`{item['hyperframes_status']}`（仅设计候选，不能阻断外部研究）"
+            for item in report.get("local_candidates") or []
+            if not item.get("qualified_for_reuse")
+        ]
         candidate_lines = [
             f"- `{item['id']}`：`{item['repository']}/{item['path']}`（{item['status']}）"
             for item in report.get("external_candidates") or []
@@ -171,7 +193,14 @@ def markdown(report: dict) -> str:
             for item in report["external_sources"]
         ]
         fallback = candidate_lines or source_lines or ["- 未配置外部来源"]
-        result = "- 本地无匹配\n" + "\n".join(fallback)
+        gate = (
+            f"- 实现前至少检查 {report['required_external_candidate_reviews']} 个候选并生成逐镜研究记录\n"
+            "- 有目录候选时禁止直接使用 `new:` 或自行制作静态 SVG\n"
+            if report.get("research_record_required_before_implementation")
+            else "- 目录无外部候选；记录检索结果后才可自建\n"
+        )
+        prototypes = "\n## 本地未完成候选\n\n" + "\n".join(prototype_lines) if prototype_lines else ""
+        result = "- 本地无合格匹配\n" + "\n".join(fallback) + "\n" + gate + prototypes
     return f"""# B-roll 模板选择
 
 - 状态：`{report['status']}`
