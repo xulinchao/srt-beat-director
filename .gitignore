@@ -1,6 +1,8 @@
 # Local runs and generated output
 /.tmp/
 /workspaces/
+/videos/
+/planning/
 
 # Development-only fixtures and source research
 /tests/

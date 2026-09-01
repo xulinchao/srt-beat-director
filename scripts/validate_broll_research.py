@@ -112,6 +112,8 @@ def validate(
                     errors.append(f"{shot_id} 模板选择报告不可读：{exc}")
                     selector_candidate_ids = set()
                 else:
+                    if selector.get("selection_policy") != "single-source-per-shot":
+                        errors.append(f"{shot_id} 模板选择报告必须声明 selection_policy=single-source-per-shot")
                     if selector.get("status") != "external-research-required":
                         errors.append(f"{shot_id} 模板选择报告未进入 external-research-required")
                     if (selector.get("query") or {}).get("semantic_structure") != structure:
@@ -124,6 +126,8 @@ def validate(
         decision = record.get("decision")
         if decision not in DECISIONS:
             errors.append(f"{shot_id} 缺少有效 decision")
+        if record.get("source_policy") != "single-source":
+            errors.append(f"{shot_id} 必须声明 source_policy=single-source")
 
         inspected = record.get("inspected_candidates")
         if not isinstance(inspected, list):
@@ -185,6 +189,15 @@ def validate(
                 errors.append(f"{shot_id} 决策为 {decision}，但 selected_candidate 未被检查")
             if selected and template_id != f"external:{selected}":
                 errors.append(f"{shot_id} template_id 应为 external:{selected}")
+            selected_items = [item for item in inspected if item.get("fit") == "selected"]
+            if len(selected_items) != 1 or selected_items[0].get("id") != selected:
+                errors.append(f"{shot_id} 必须且只能有一个 fit=selected，且必须等于 selected_candidate")
+            for item in inspected:
+                if item.get("id") != selected and not str(item.get("rejection_reason") or "").strip():
+                    errors.append(f"{shot_id} 未选候选必须写明 rejection_reason：{item.get('id')}")
+            source = record.get("implementation_source") or {}
+            if source.get("candidate_id") != selected:
+                errors.append(f"{shot_id} implementation_source.candidate_id 必须等于 selected_candidate")
         elif decision == "custom-after-external-review":
             if selected is not None:
                 errors.append(f"{shot_id} 自建决策的 selected_candidate 必须为 null")

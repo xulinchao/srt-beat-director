@@ -148,6 +148,7 @@ def select(
 
     return {
         "schema_version": "0.1",
+        "selection_policy": "single-source-per-shot",
         "status": status,
         "query": {
             "semantic_structure": semantic_structure,
@@ -195,6 +196,7 @@ def markdown(report: dict) -> str:
         fallback = candidate_lines or source_lines or ["- 未配置外部来源"]
         gate = (
             f"- 实现前至少检查 {report['required_external_candidate_reviews']} 个候选并生成逐镜研究记录\n"
+            "- 候选比较后只能选一个最终来源，其他候选只保留拒绝理由\n"
             "- 有目录候选时禁止直接使用 `new:` 或自行制作静态 SVG\n"
             if report.get("research_record_required_before_implementation")
             else "- 目录无外部候选；记录检索结果后才可自建\n"

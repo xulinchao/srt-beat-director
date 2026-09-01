@@ -7,9 +7,20 @@ metadata:
 
 # Knowledge A/B-roll Video
 
-把已有口播时间轴和配音稳定转成可复现的不露脸知识视频。Codex 负责读取 SRT 与 MP3、理解内容、编排全片并生成 A-roll 主画面；HyperFrames 负责 B-roll 信息动画；ChatCut Desktop 负责素材池、主时间线、字幕、声音和最终导出。先把内容导演清楚，再生成资产和动画；画面职责、时间、来源、实现工具与审核状态必须可追溯。
+把已有口播时间轴和配音稳定转成可复现的不露脸知识视频。Codex 负责读取 SRT 与 MP3、理解内容、编排全片并生成 A-roll 主画面；B-roll 按选定模板骨架用 HyperFrames 或 ChatCut Motion Graphic 实现；ChatCut Desktop 负责素材池、主时间线、字幕、声音和最终导出。先把内容导演清楚，再生成资产和动画；画面职责、时间、来源、实现工具与审核状态必须可追溯。
 
 本 Skill 的方法基线来自配套教程、原始提示词和实际成片。开始导演前先读 [references/method-baseline.md](references/method-baseline.md)。[生产提示词方法库](references/production-prompts.md) 只用于理解方法和字段意图，不是嵌入命令；只读取当前阶段需要的部分，并以本 Skill、当前用户请求和项目真源为准。
+
+## 先后顺序与不可跳过的编排门
+
+本 Skill 的默认顺序是：`预检 → 全文理解 → 视觉编排表 → 视觉基线 → 素材与动效 → ChatCut 组装 → 样片 QA → 最终导出`。
+
+- 在视觉编排表通过前，不创建新的 ChatCut 项目，不导入素材，不生成图片、视频或动画，不导出成片。已有 ChatCut 项目可以只读盘点，但不得修改。
+- 视觉编排表不是口头说明，也不是可选的中间产物。必须同时生成机器真源 `planning/visual-plan.json` 和人类可审阅的 `planning/visual-plan.md`。
+- `visual-plan.md` 的主体必须严格使用以下七列，不能换成逐镜标题、自由字段或另一套列名：`镜头 | 时间 | 配音文案 | 画面类型 | 画面设计 | 动态变化 | 画面衔接`。镜头编号从 `S001` 连续递增；时间以原始 SRT/对齐轴的毫秒边界填写；配音文案逐字保留。
+- 表格后必须单独列出：需要补充的素材、需要确认的视觉方向、制作难度较高的镜头。没有内容时也要明确写“无”。
+- ChatCut 新建项目只在计划和必要的视觉基线通过后执行，作用是承载统一素材池、主时间线、字幕和最终导出；它不是替代导演编排、素材规划或 B-roll 设计的捷径。
+- 如果用户只要求编排、分镜或素材清单，完成编排门后停止。如果用户要求最终视频，也必须先完成编排门；只有用户明确授权“无需确认，直接连续制作”时，才可在代理自检后继续。
 
 ## 入口与路由
 
@@ -27,7 +38,8 @@ metadata:
 3. 运行 `python scripts/preflight.py --srt <path> --audio <path> --out-dir <project>/planning`。已有 ChatCut 项目还要记录音频、字幕、时间线、轨道、素材池与已放置镜头的盘点结果。
 4. 有人物参考时，先把用途登记到 `input/references/index.json`，再运行 `scripts/validate_references.py`。`character-identity` 只锁人物身份，不能顺带决定全片背景、B-roll UI、版式或动效语言。
 5. 做内容分析和分镜前读 [references/directing.md](references/directing.md)。原始提示词参考只在需要核对方法来源时读取对应章节，不得覆盖当前项目真源。
-6. B-roll 映射前读 [references/semantic-template-mapping.md](references/semantic-template-mapping.md)。先形成带语义结构的视觉计划草案，运行模板索引与语义目录校验，再为每个 B-roll 运行 `scripts/select_broll_template.py`。本地没有合格模板且目录存在外部候选时，必须读取 [B-roll 外部骨架研究门](references/broll-external-research.md)，检查具体镜头卡和实现文件，生成 `planning/broll-research/<shot-id>.json` 并通过 `scripts/validate_broll_research.py`；不得直接写 `new:<id>` 或开始制作 SVG。
+   - 视觉编排阶段必须读取 [references/production-prompts.md](references/production-prompts.md) §2，并把其中的五个导演问题、五类画面类型、时间边界规则、七列表头和表后检查项逐项落实；“方法库”表示来源文件，不表示这些要求可以跳过。
+6. B-roll 映射前读 [references/semantic-template-mapping.md](references/semantic-template-mapping.md) 和 [references/broll-production.md](references/broll-production.md)。先形成带语义结构的视觉计划草案，运行模板索引与语义目录校验，再为每个 B-roll 运行 `scripts/select_broll_template.py`。本地没有合格模板且目录存在外部候选时，必须读取 [B-roll 外部骨架研究门](references/broll-external-research.md)，检查具体镜头卡和实现文件，生成 `planning/broll-research/<shot-id>.json` 并通过 `scripts/validate_broll_research.py`；两个外部项目只是候选池，每个镜头必须选定一个唯一的实现来源，未选来源只能记录为拒绝候选，不得混合其运动骨架；不得直接写 `new:<id>` 或开始制作 SVG。
 7. 模板与外部研究路由完成后，运行 `scripts/validate_plan.py`，再用 `scripts/render_plan_markdown.py` 重生派生视图。外部来源必须落到具体文件、当前项目中的实现和实际渲染结果，不能只记录仓库链接。
 8. 审核、样片和交付前读 [references/qa.md](references/qa.md)，并运行 `scripts/validate_state.py` 检查批准哈希和过期状态。
 9. 只有实际使用 HyperFrames 时才读 `hyperframes` Skill，再按需读取底层 Skill；不用 HyperFrames 的镜头不得为满足流程而强行调用。
@@ -107,9 +119,13 @@ python scripts/validate_plan.py \
 python scripts/render_plan_markdown.py \
   --plan <project>/planning/visual-plan.json \
   --out <project>/planning/visual-plan.md
+
+python scripts/validate_plan_markdown.py \
+  --plan <project>/planning/visual-plan.json \
+  --markdown <project>/planning/visual-plan.md
 ```
 
-只有校验通过后才能进入视觉基线和资产阶段。手动审核模式等待用户确认；用户已明确授权连续执行时，按代理自检模式记录结果并继续。
+`validate_plan.py` 负责校验时间、cue 覆盖、S001 编号、A/B 字段、变化和素材契约；`validate_plan_markdown.py` 负责校验对用户交付的七列表格是否真的存在且列名正确。两个校验都通过后，才能进入视觉基线和资产阶段。手动审核模式等待用户确认；用户已明确授权连续执行时，按代理自检模式记录结果并继续。
 
 ### 3. 视觉基线
 
@@ -119,7 +135,7 @@ python scripts/render_plan_markdown.py \
 
 按真实依赖顺序生成资产：先人物或风格参考，再生成依赖它们的 A-roll；互不依赖的 B-roll 可以并行准备。A-roll 应按语义组合 `presenter`、`protagonist`、`supporting`、`first-person` 等视角，不能让固定人物全片反复居中站立；不要求机械凑齐四类，但连续 A-roll 必须改变叙事视角、动作或场景关系。
 
-B-roll 按 `verified-media / no-material / text-only` 路由，并按表现形式、语义结构、信息项数量、时长和画幅匹配模板。生产顺序为：已核实素材直接复用；关系、流程、对比、因果等无素材信息动画由 HyperFrames 实现；需要动态抽象场景时再用视频生成；章节、金句和结论克制使用文字动效。HyperFrames 实现失败时先简化同一骨架或改用已研究的其他候选；仍失败则标记素材缺口并继续其他镜头，禁止静默换成无关静态图或把 ChatCut 临时动效当作默认替代。只有用户明确改变工具分工时，才把其他动效工具设为主实现。
+B-roll 按 `verified-media / no-material / text-only` 路由，并按表现形式、语义结构、信息项数量、时长和画幅匹配模板。生产顺序为：已核实素材直接复用；本地无合格模板时研究外部候选；选定后只沿一个来源的元素关系、主要动作和阶段顺序实现，并只做背景、字体、文案、已核实素材和必要画幅适配等最小修改。若该来源实现失败，只能回退到另一个已记录候选并重新确定唯一来源，不得把两个候选拼成新骨架。仍失败则标记素材缺口并继续其他镜头，禁止静默换成无关静态图、临时 SVG 或把 ChatCut 临时动效当作默认替代。
 
 模板索引先通过 `scripts/validate_template_index.py`，语义目录通过 `scripts/validate_semantic_map.py`。只有带可审阅预览、可追溯来源、明确动作阶段并得到质量批准的本地模板才可复用；否则必须先研究 `references/semantic-template-map.json` 中同结构的具体外部候选。候选均不适合时，只有在逐项记录拒绝理由和借鉴的运动原则后才允许从零实现；目录没有候选时才研究未索引仓库。复制或改造源码前记录来源、许可证、原框架和兼容性；未声明许可证的公开仓库只允许研究结构，不默认允许复制源码。静态 SVG 可以是 HyperFrames 组件，但不能单独作为完成的 B-roll 动画。
 

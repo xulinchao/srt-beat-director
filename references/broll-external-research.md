@@ -7,12 +7,14 @@
 1. 运行 `scripts/select_broll_template.py`，保存逐镜选择报告。
 2. 若报告为 `external-research-required`，先检查 `external_candidates`，不得直接写 `new:<id>` 或开始实现。
 3. 至少检查 `min(2, 当前结构候选数)` 个候选。每个候选先读镜头卡；状态为 `port-required` 时还要读镜头卡指向的具体实现文件。
-4. 比较语义适配、元素关系、主要运动、阶段顺序、原框架、许可证和最小改造范围。
+4. 比较语义适配、元素关系、主要运动、阶段顺序、原框架、许可证和最小改造范围；比较结果只用于选出一个唯一实现来源。
 5. 选择以下一种决策：
-   - `port-external-skeleton`：许可证允许移植，保留骨架并改造成 HyperFrames；
-   - `study-and-reimplement`：只允许研究结构，在 HyperFrames 中重新实现；
+   - `port-external-skeleton`：许可证允许移植，保留骨架并改造成当前主实现载体（HyperFrames 或 ChatCut Motion Graphic）；
+   - `study-and-reimplement`：只允许研究结构，在当前主实现载体中按单一来源重新实现；
    - `custom-after-external-review`：候选均不适合，记录逐项拒绝理由后从零实现，但仍吸收已验证的运动原则。
 6. 把记录保存到 `planning/broll-research/<shot-id>.json`，运行 `scripts/validate_broll_research.py`。验证通过前禁止实现该 B-roll。
+
+每个镜头必须有且只有一个 `selected_candidate`。`inspected_candidates` 可以包含多个候选，但未选候选只能写拒绝理由，不得把其运动阶段、布局或节奏混入 `migration_plan` 或最终实现。最终资产描述必须能映射到一个唯一的镜头卡/实现文件。
 
 ```text
 python scripts/validate_broll_research.py \
@@ -48,7 +50,17 @@ python scripts/validate_broll_research.py \
     }
   ],
   "decision": "port-external-skeleton",
+  "source_policy": "single-source",
   "selected_candidate": "shotcraft-before-after-slider",
+  "implementation_source": {
+    "candidate_id": "shotcraft-before-after-slider",
+    "repository": "video-shotcraft",
+    "shot_card": "references/shots/data/before-after-slider-scrub.md",
+    "implementation_files": [
+      "demos/data/before-after-slider-scrub/BeforeAfterSliderScrub.tsx"
+    ],
+    "mode": "port-skeleton-to-current-runtime"
+  },
   "extracted_skeleton": {
     "element_relation": "两版内容同位叠放",
     "main_motion": "分割杆先快甩后慢扫",
