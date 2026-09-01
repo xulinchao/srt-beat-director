@@ -1,6 +1,6 @@
 # 语义到 B-roll 模板的映射
 
-本映射把教程中的运行时判断固化成可维护目录。它不根据单个关键词选模板，而按下面的顺序路由：
+本映射把项目的运行时判断固化成可维护目录。它不根据单个关键词选模板，而按下面的顺序路由：
 
 1. 先写清 `viewer_takeaway`：这一镜结束时观众必须理解什么。
 2. 判断 `screen_role`。讲人、经历、态度和情绪用 A；讲知识增量、证据、关系和步骤用 B。
@@ -44,3 +44,14 @@
 - `local-template`：已进入本地模板索引，并按索引中的状态判断是否可直接使用。
 
 外部候选不是本地模板。只有完成许可证记录、HyperFrames 移植、目标画幅与 seek-safe 验证后，才能加入 `templates/template-index.json`。
+
+发布后的 Skill 可先独立校验目录结构，不要求本地存在开发阶段的外部仓库副本：
+
+```text
+python scripts/validate_semantic_map.py \
+  --mapping references/semantic-template-map.json \
+  --template-index templates/template-index.json \
+  --out references/semantic-template-validation-report.json
+```
+
+实际选择外部候选时，再取得对应仓库，并通过 `--repositories-root <external-repositories-root>` 验证具体镜头卡和实现文件。

@@ -1,6 +1,6 @@
 {
   "schema_version": "0.1",
-  "method": "article-derived-semantic-routing",
+  "method": "project-semantic-routing",
   "scanned_at": "2026-08-30",
   "canonical_structures": [
     "comparison",
@@ -374,20 +374,6 @@
           "status": "port-required"
         }
       ]
-    }
-  ],
-  "unindexed_fallbacks": [
-    {
-      "repository": "hyperframes-launches",
-      "root": "research/reference-repos/hyperframes-launches",
-      "license": "not-detected",
-      "usage_policy": "structure-study-only-until-license-verified"
-    },
-    {
-      "repository": "vibe-motion-skills",
-      "root": "research/reference-repos/vibe-motion-skills",
-      "license": "not-detected-at-repository-root",
-      "usage_policy": "inspect-per-skill-license-before-reuse"
     }
   ]
 }

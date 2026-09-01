@@ -1,6 +1,8 @@
 # B-roll 制作契约
 
-本文件把 `references/production-prompts.md` §6 的 B-roll 提示词转成可执行门控。它解决的核心问题是：B-roll 不能从“看起来像动效”开始，而要先确定观众理解点、语义结构和唯一的动效来源。
+本文件与 `references/production-prompts.md` §5 `b-roll-motion-selection-v1` 配套使用。§5 是每个 B-roll 必须实际实例化的选择提示词，本文件负责其数据约束、实现门控和验收。B-roll 不能从“看起来像动效”开始，而要先确定观众理解点、语义结构和唯一的动效来源。
+
+每镜先保存 `prompts/b-scenes/<shot-id>.json/.md`，至少记录 `prompt_id`、生产提示词文件 SHA-256、镜头输入、最终提示词、选择报告路径、输出资产和状态。缺少该记录时，即使模板选择或动画文件存在，也不能声称 §5 已使用。
 
 ## 每镜头输入
 

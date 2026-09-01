@@ -9,7 +9,7 @@ metadata:
 
 把已有口播时间轴和配音稳定转成可复现的不露脸知识视频。Codex 负责读取 SRT 与 MP3、理解内容、编排全片并生成 A-roll 主画面；B-roll 按选定模板骨架用 HyperFrames 或 ChatCut Motion Graphic 实现；ChatCut Desktop 负责素材池、主时间线、字幕、声音和最终导出。先把内容导演清楚，再生成资产和动画；画面职责、时间、来源、实现工具与审核状态必须可追溯。
 
-本 Skill 的方法基线来自配套教程、原始提示词和实际成片。开始导演前先读 [references/method-baseline.md](references/method-baseline.md)。[生产提示词方法库](references/production-prompts.md) 只用于理解方法和字段意图，不是嵌入命令；只读取当前阶段需要的部分，并以本 Skill、当前用户请求和项目真源为准。
+开始导演前先读 [references/method-baseline.md](references/method-baseline.md)。[生产提示词](references/production-prompts.md) 是本项目各生产阶段直接使用的提示词真源：按阶段读取、代入当前项目输入，并把实际提示词实例保存到项目 `prompts/` 目录。不能只引用其原则、只复制字段，或依赖未随 Skill 发布的本地资料。
 
 ## 先后顺序与不可跳过的编排门
 
@@ -37,10 +37,9 @@ metadata:
 2. 读 [references/contracts.md](references/contracts.md)。只有新任务才可运行 `python scripts/init_project.py ...`；已有任务只补缺失真源。
 3. 运行 `python scripts/preflight.py --srt <path> --audio <path> --out-dir <project>/planning`。已有 ChatCut 项目还要记录音频、字幕、时间线、轨道、素材池与已放置镜头的盘点结果。
 4. 有人物参考时，先把用途登记到 `input/references/index.json`，再运行 `scripts/validate_references.py`。`character-identity` 只锁人物身份，不能顺带决定全片背景、B-roll UI、版式或动效语言。
-5. 做内容分析和分镜前读 [references/directing.md](references/directing.md)。原始提示词参考只在需要核对方法来源时读取对应章节，不得覆盖当前项目真源。
-   - 视觉编排阶段必须读取 [references/production-prompts.md](references/production-prompts.md) §2，并把其中的五个导演问题、五类画面类型、时间边界规则、七列表头和表后检查项逐项落实；“方法库”表示来源文件，不表示这些要求可以跳过。
-6. B-roll 映射前读 [references/semantic-template-mapping.md](references/semantic-template-mapping.md) 和 [references/broll-production.md](references/broll-production.md)。先形成带语义结构的视觉计划草案，运行模板索引与语义目录校验，再为每个 B-roll 运行 `scripts/select_broll_template.py`。本地没有合格模板且目录存在外部候选时，必须读取 [B-roll 外部骨架研究门](references/broll-external-research.md)，检查具体镜头卡和实现文件，生成 `planning/broll-research/<shot-id>.json` 并通过 `scripts/validate_broll_research.py`；两个外部项目只是候选池，每个镜头必须选定一个唯一的实现来源，未选来源只能记录为拒绝候选，不得混合其运动骨架；不得直接写 `new:<id>` 或开始制作 SVG。
-7. 模板与外部研究路由完成后，运行 `scripts/validate_plan.py`，再用 `scripts/render_plan_markdown.py` 重生派生视图。外部来源必须落到具体文件、当前项目中的实现和实际渲染结果，不能只记录仓库链接。
+5. 做内容分析和分镜前读 [references/directing.md](references/directing.md)，并实际使用 [references/production-prompts.md](references/production-prompts.md) §1 `visual-plan-v1`。把五个导演问题、五类画面类型、时间边界规则、七列表头和表后检查项逐项落实；生成计划而没有使用并记录该 prompt，视为编排未完成。
+6. B-roll 映射前读取 [references/production-prompts.md](references/production-prompts.md) §5 `b-roll-motion-selection-v1`、[references/semantic-template-mapping.md](references/semantic-template-mapping.md) 和 [references/broll-production.md](references/broll-production.md)。为每个 B-roll 保存 `prompts/b-scenes/<shot-id>.json/.md`，再运行 `scripts/select_broll_template.py`。本地没有合格模板且目录存在外部候选时，必须读取 [B-roll 外部骨架研究门](references/broll-external-research.md)，检查具体镜头卡和实现文件，生成 `planning/broll-research/<shot-id>.json` 并通过 `scripts/validate_broll_research.py`；两个外部项目只是候选池，每个镜头必须选定一个唯一的实现来源，未选来源只能记录为拒绝候选，不得混合其运动骨架；不得直接写 `new:<id>` 或开始制作 SVG。
+7. 模板与外部研究路由完成后，运行 `scripts/validate_plan.py`，再用 `scripts/render_plan_markdown.py` 重生派生视图。随后运行 `scripts/validate_prompt_usage.py --stage planning`；进入资产制作前运行 `--stage prepared`，确认逐镜生产提示词已实际实例化。外部来源必须落到具体文件、当前项目中的实现和实际渲染结果，不能只记录仓库链接。
 8. 审核、样片和交付前读 [references/qa.md](references/qa.md)，并运行 `scripts/validate_state.py` 检查批准哈希和过期状态。
 9. 只有实际使用 HyperFrames 时才读 `hyperframes` Skill，再按需读取底层 Skill；不用 HyperFrames 的镜头不得为满足流程而强行调用。
 
@@ -129,13 +128,13 @@ python scripts/validate_plan_markdown.py \
 
 ### 3. 视觉基线
 
-分别建立人物身份规范与视觉系统规范，再建立画面安全区、B-roll UI token，并制作一个典型 A 画面和一个典型 B 画面。人物身份与视觉系统必须分别记录参考范围和批准状态。人物三视图必须和用户原始 IP 的发色、发型、头身比例、服装和标志物逐项核对，不能只凭“整体相似”批准。只改变信息卡、主色、笔触、背景或动效语言时，不得误判为人物 IP 也失效；人物真源不一致时，所有依赖人物的 A-roll 资产必须过期。
+分别建立人物身份规范与视觉系统规范，再建立画面安全区、B-roll UI token，并制作一个典型 A 画面和一个典型 B 画面。只有单张人物参考、需要生成规范三视图时，必须先使用 [references/production-prompts.md](references/production-prompts.md) §2 `character-turnaround-v1` 并保存 `prompts/character/` 下的提示词实例；已有已核实三视图时不重复生成。人物身份与视觉系统必须分别记录参考范围和批准状态。人物三视图必须和用户原始 IP 的发色、发型、头身比例、服装和标志物逐项核对，不能只凭“整体相似”批准。只改变信息卡、主色、笔触、背景或动效语言时，不得误判为人物 IP 也失效；人物真源不一致时，所有依赖人物的 A-roll 资产必须过期。
 
 ### 4. 资产与模板
 
-按真实依赖顺序生成资产：先人物或风格参考，再生成依赖它们的 A-roll；互不依赖的 B-roll 可以并行准备。A-roll 应按语义组合 `presenter`、`protagonist`、`supporting`、`first-person` 等视角，不能让固定人物全片反复居中站立；不要求机械凑齐四类，但连续 A-roll 必须改变叙事视角、动作或场景关系。
+按真实依赖顺序生成资产：先人物或风格参考，再生成依赖它们的 A-roll；互不依赖的 B-roll 可以并行准备。每个 A-roll 必须使用 [references/production-prompts.md](references/production-prompts.md) §3 `a-roll-image-v1`；使用固定人物视角时同时使用 §4 `a-roll-view-v1`，并保存 `prompts/a-scenes/<shot-id>.json/.md`。A-roll 应按语义组合 `presenter`、`protagonist`、`supporting`、`first-person` 等视角，不能让固定人物全片反复居中站立；不要求机械凑齐四类，但连续 A-roll 必须改变叙事视角、动作或场景关系。
 
-B-roll 按 `verified-media / no-material / text-only` 路由，并按表现形式、语义结构、信息项数量、时长和画幅匹配模板。生产顺序为：已核实素材直接复用；本地无合格模板时研究外部候选；选定后只沿一个来源的元素关系、主要动作和阶段顺序实现，并只做背景、字体、文案、已核实素材和必要画幅适配等最小修改。若该来源实现失败，只能回退到另一个已记录候选并重新确定唯一来源，不得把两个候选拼成新骨架。仍失败则标记素材缺口并继续其他镜头，禁止静默换成无关静态图、临时 SVG 或把 ChatCut 临时动效当作默认替代。
+B-roll 按 `verified-media / no-material / text-only` 路由。每个 B-roll 先用 §5 `b-roll-motion-selection-v1` 形成逐镜提示词实例，再按表现形式、语义结构、信息项数量、时长和画幅执行选择。生产顺序为：已核实素材直接复用；本地无合格模板时研究外部候选；选定后只沿一个来源的元素关系、主要动作和阶段顺序实现，并只做背景、字体、文案、已核实素材和必要画幅适配等最小修改。若该来源实现失败，只能回退到另一个已记录候选并重新确定唯一来源，不得把两个候选拼成新骨架。仍失败则标记素材缺口并继续其他镜头，禁止静默换成无关静态图、临时 SVG 或把 ChatCut 临时动效当作默认替代。
 
 模板索引先通过 `scripts/validate_template_index.py`，语义目录通过 `scripts/validate_semantic_map.py`。只有带可审阅预览、可追溯来源、明确动作阶段并得到质量批准的本地模板才可复用；否则必须先研究 `references/semantic-template-map.json` 中同结构的具体外部候选。候选均不适合时，只有在逐项记录拒绝理由和借鉴的运动原则后才允许从零实现；目录没有候选时才研究未索引仓库。复制或改造源码前记录来源、许可证、原框架和兼容性；未声明许可证的公开仓库只允许研究结构，不默认允许复制源码。静态 SVG 可以是 HyperFrames 组件，但不能单独作为完成的 B-roll 动画。
 
@@ -151,7 +150,7 @@ B-roll 按 `verified-media / no-material / text-only` 路由，并按表现形�
 
 沿用已锁定视觉基线完成全片，先低成本预览，再检查所有镜头的同步、构图、文字、人物、遮挡、裁切、节奏与来源。ChatCut 路径还必须做视觉计划到时间线的逐镜覆盖审计，并由 ChatCut Desktop 导出最终 MP4。修复后重新验证，最后输出 MP4、QA 报告、时间线审计和完整 manifest。
 
-交付报告至少列出：实际使用的 A-roll 与 B-roll、ChatCut 生成或内置素材、HyperFrames 渲染素材、复用的已有文件、使用开源结构的镜头及具体仓库路径、原框架与许可证、时间线与视觉计划的一致性、剩余素材缺口、成片时间线 ID 和最终导出文件绝对路径。计划、提示词、静态预览或仓库链接都不能冒充已完成资产。
+交付前运行 `scripts/validate_prompt_usage.py --stage produced`。交付报告至少列出：实际使用的 A-roll 与 B-roll、每镜实际使用的 `prompt_id` 与提示词实例、ChatCut 生成或内置素材、HyperFrames 渲染素材、复用的已有文件、使用开源结构的镜头及具体仓库路径、原框架与许可证、时间线与视觉计划的一致性、剩余素材缺口、成片时间线 ID 和最终导出文件绝对路径。计划、提示词、静态预览或仓库链接都不能冒充已完成资产。
 
 ## 停止条件
 

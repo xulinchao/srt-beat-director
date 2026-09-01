@@ -22,7 +22,7 @@ python scripts/validate_broll_research.py \
   --template-index <project>/templates/template-index.json \
   --semantic-map references/semantic-template-map.json \
   --research-dir <project>/planning/broll-research \
-  --repositories-root research/reference-repos \
+  --repositories-root <external-repositories-root> \
   --out <project>/planning/broll-research-validation.json
 ```
 
@@ -73,7 +73,7 @@ python scripts/validate_broll_research.py \
 
 字段要求：
 
-- `inspected_candidates` 只能引用当前语义结构目录中的候选；路径必须落到本地仓库的具体文件。
+- `inspected_candidates` 只能引用当前语义结构目录中的候选；路径必须落到本次任务实际取得的外部仓库副本中的具体文件。外部仓库目录由执行时显式传入，不依赖 Skill 仓库内被忽略的开发资料。
 - `fit` 使用 `selected`、`partial` 或 `rejected`。未选候选必须写非空 `rejection_reason`。
 - 选择外部骨架时，`template_id` 写成 `external:<candidate-id>`。
 - 从零实现时，`template_id` 才能写 `new:<id>`；所有已检查候选必须被拒绝，并提供 `custom_reason` 与至少一个 `borrowed_motion_principles`。

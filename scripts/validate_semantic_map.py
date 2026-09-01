@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate the article-derived semantic-to-template mapping catalog."""
+"""Validate the project's semantic-to-template mapping catalog."""
 
 from __future__ import annotations
 
@@ -22,13 +22,21 @@ CANONICAL_STRUCTURES = {
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--mapping", required=True, type=Path)
-    parser.add_argument("--repositories-root", required=True, type=Path)
+    parser.add_argument(
+        "--repositories-root",
+        type=Path,
+        help="Optional root containing externally acquired repository copies for path verification.",
+    )
     parser.add_argument("--template-index", type=Path)
     parser.add_argument("--out", required=True, type=Path)
     return parser.parse_args()
 
 
-def validate(mapping_path: Path, repositories_root: Path, template_index_path: Path | None = None) -> dict:
+def validate(
+    mapping_path: Path,
+    repositories_root: Path | None,
+    template_index_path: Path | None = None,
+) -> dict:
     mapping = json.loads(mapping_path.read_text(encoding="utf-8"))
     template_ids: set[str] = set()
     if template_index_path:
@@ -71,13 +79,17 @@ def validate(mapping_path: Path, repositories_root: Path, template_index_path: P
             for key in ("repository", "path", "semantic_fit", "skeleton", "license", "status"):
                 if candidate.get(key) in (None, "", [], {}):
                     errors.append(f"{candidate_id} 缺少 {key}")
-            source_path = repositories_root / str(candidate.get("repository")) / str(candidate.get("path"))
-            if not source_path.is_file():
-                errors.append(f"{candidate_id} 的参考路径不存在：{source_path}")
+            if repositories_root is not None:
+                source_path = repositories_root / str(candidate.get("repository")) / str(candidate.get("path"))
+                if not source_path.is_file():
+                    errors.append(f"{candidate_id} 的参考路径不存在：{source_path}")
             skeleton = candidate.get("skeleton") or {}
             for key in ("element_relation", "main_motion", "phase_order"):
                 if skeleton.get(key) in (None, "", []):
                     errors.append(f"{candidate_id} 的 skeleton 缺少 {key}")
+
+    if repositories_root is None:
+        warnings.append("未提供外部仓库根目录；已校验候选目录结构，但未校验外部镜头卡文件是否已取得")
 
     return {
         "schema_version": "0.1",

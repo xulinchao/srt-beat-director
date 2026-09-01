@@ -25,6 +25,8 @@ project/
     content-analysis.md
     visual-plan.json
     visual-plan.md
+    visual-plan-prompt.json
+    visual-plan-prompt.md
     template-selection/
       <shot-id>.json
       <shot-id>.md
@@ -66,6 +68,8 @@ project/
 ```
 
 `character-bible.json` 仅在人物或重复角色存在时创建。不要制造空占位目录或文件；在对应阶段首次需要时创建。
+
+`prompts/` 不是可选日志，而是生产提示词的实际使用记录。只有进入对应阶段时才创建实例文件；不能预先制造空占位。
 
 `input/references/index.json` 为参考用途范围真源。每项至少记录：
 
@@ -288,3 +292,62 @@ python scripts/validate_references.py \
 最终 `manifest.json` 至少列出每个输入、真源、采用的提示词、B-roll 研究记录、资产、模板、工程文件、样片、成片和报告的相对路径、SHA-256、来源或生成方式、版本与状态。派生缓存可记录，但不能替代真源。
 
 ChatCut 路径的 manifest 还要记录项目 ID、成片时间线 ID、导出任务或结果、每个计划镜头对应的时间线素材实例，以及 HyperFrames 渲染文件导入后的 ChatCut asset ID。`reports/timeline-audit.json` 逐镜比较 `visual-plan.json` 与实际时间线；仅有本地渲染文件但未导入或未放置，不算镜头已落实。
+
+## 8. 生产提示词实例
+
+`references/production-prompts.md` 是提示词真源。实际使用不能只靠报告中写一句“已参考”，必须保存实例 JSON 和可选的 Markdown 派生视图：
+
+- 全片编排：`planning/visual-plan-prompt.json/.md`，使用 `visual-plan-v1`；
+- 单图生成角色三视图：`prompts/character/turnaround.json/.md`，使用 `character-turnaround-v1`；
+- 每个 A-roll：`prompts/a-scenes/<shot-id>.json/.md`，使用 `a-roll-image-v1`；固定人物模式还要同时使用 `a-roll-view-v1`；
+- 每个 B-roll：`prompts/b-scenes/<shot-id>.json/.md`，使用 `b-roll-motion-selection-v1`。
+
+最小 JSON：
+
+```json
+{
+  "schema_version": "0.1",
+  "subject_id": "S001",
+  "prompt_ids": ["a-roll-image-v1", "a-roll-view-v1"],
+  "prompt_source": "references/production-prompts.md",
+  "prompt_source_sha256": "",
+  "inputs": {},
+  "resolved_prompt": "",
+  "artifacts": [],
+  "selection_report": null,
+  "status": "prepared"
+}
+```
+
+字段规则：
+
+- `prompt_ids` 必须覆盖当前阶段要求的稳定 ID，不能用自由名称代替；
+- `prompt_source_sha256` 必须等于执行时 `references/production-prompts.md` 的 SHA-256；提示词真源改变后，旧实例自动过期；
+- `inputs` 保存实际代入的镜头文案、时间、导演意图、参考图、视觉规范或 B-roll 结构等输入，不能是空对象；
+- `resolved_prompt` 保存已经替换占位符、可实际执行的完整提示词，不能只写章节链接或摘要；
+- `status` 使用 `prepared`、`used`、`completed` 或 `failed`。`prepared` 只证明提示词已实例化，不能证明已执行；
+- `artifacts` 记录提示词产生的实际输出。`completed` 时至少有一个存在的项目相对路径；
+- B-roll 的 `selection_report` 必须指向 `planning/template-selection/<shot-id>.json`，并与该镜头实际选型一致；
+- 单图角色三视图只有 `character-bible.json` 声明 `generation_mode=generated-from-single-reference` 时才强制要求；用户直接提供并核实三视图时使用 `generation_mode=user-supplied-turnaround`，不伪造生成提示词实例。
+
+按阶段运行：
+
+```text
+python scripts/validate_prompt_usage.py \
+  --project-dir <project> \
+  --production-prompts references/production-prompts.md \
+  --stage planning \
+  --out-dir <project>/planning
+
+python scripts/validate_prompt_usage.py \
+  --project-dir <project> \
+  --production-prompts references/production-prompts.md \
+  --stage prepared \
+  --out-dir <project>/planning
+
+python scripts/validate_prompt_usage.py \
+  --project-dir <project> \
+  --production-prompts references/production-prompts.md \
+  --stage produced \
+  --out-dir <project>/reports
+```
