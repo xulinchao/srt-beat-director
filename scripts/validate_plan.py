@@ -10,6 +10,8 @@ import sys
 from collections import Counter
 from pathlib import Path
 
+from broll_runtime import template_status, validate_runtime_decision
+
 
 CANONICAL_SEMANTIC_STRUCTURES = {
     "comparison",
@@ -20,6 +22,17 @@ CANONICAL_SEMANTIC_STRUCTURES = {
     "replacement",
     "expansion",
 }
+
+A_ROLL_MULTI_STATE_THRESHOLD_MS = 4000
+A_ROLL_THREE_STATE_THRESHOLD_MS = 6000
+
+
+def required_a_roll_change_count(duration_ms: int) -> int:
+    if duration_ms >= A_ROLL_THREE_STATE_THRESHOLD_MS:
+        return 3
+    if duration_ms >= A_ROLL_MULTI_STATE_THRESHOLD_MS:
+        return 2
+    return 1
 
 
 def parse_args() -> argparse.Namespace:
@@ -44,6 +57,69 @@ def sha256(path: Path) -> str:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def normalize_text(value: object) -> str:
+    return "".join(str(value or "").split())
+
+
+def validate_narration_binding(
+    *,
+    shot: dict,
+    changes: list[dict],
+    cues_by_id: dict[int, dict],
+    errors: list[str],
+) -> None:
+    shot_id = str(shot.get("id") or "unknown")
+    beats = shot.get("narration_beats") or []
+    if not isinstance(beats, list) or not beats:
+        errors.append(f"{shot_id} 缺少 narration_beats，无法绑定旁白内部节奏")
+        return
+    if len(beats) != len(changes):
+        errors.append(
+            f"{shot_id} changes 与 narration_beats 必须一一对应，"
+            f"当前为 {len(changes)} / {len(beats)}"
+        )
+
+    previous_at_ms = -1
+    shot_cue_ids = set(shot.get("cue_ids") or [])
+    for position, beat in enumerate(beats, start=1):
+        beat_label = f"{shot_id} narration_beat-{position}"
+        if not isinstance(beat, dict):
+            errors.append(f"{beat_label} 必须为对象")
+            continue
+        cue_ids = beat.get("cue_ids") or []
+        if not isinstance(cue_ids, list) or not cue_ids:
+            errors.append(f"{beat_label} 缺少 cue_ids")
+            continue
+        if any(cue_id not in shot_cue_ids for cue_id in cue_ids):
+            errors.append(f"{beat_label} cue_ids 必须属于当前镜头")
+        missing = [cue_id for cue_id in cue_ids if cue_id not in cues_by_id]
+        if missing:
+            errors.append(f"{beat_label} 引用了不存在的 cue：{missing}")
+            continue
+        beat_cues = [cues_by_id[cue_id] for cue_id in cue_ids]
+        at_ms = beat.get("at_ms")
+        expected_at_ms = beat_cues[0]["start_ms"]
+        if at_ms != expected_at_ms:
+            errors.append(f"{beat_label} at_ms 应绑定首个 cue 起点 {expected_at_ms}")
+        if isinstance(at_ms, int) and at_ms <= previous_at_ms:
+            errors.append(f"{beat_label} at_ms 必须严格递增")
+        if isinstance(at_ms, int):
+            previous_at_ms = at_ms
+        expected_text = "\n".join(cue["text"] for cue in beat_cues)
+        if normalize_text(beat.get("trigger_text")) != normalize_text(expected_text):
+            errors.append(f"{beat_label} trigger_text 与绑定 cue 原文不一致")
+        for key in ("information_change", "state_after"):
+            if not str(beat.get(key) or "").strip():
+                errors.append(f"{beat_label} 缺少 {key}")
+        if position <= len(changes):
+            change_at_ms = changes[position - 1].get("at_ms")
+            if change_at_ms != at_ms:
+                errors.append(
+                    f"{shot_id} change-{position} 与 narration_beat-{position} "
+                    f"时间不一致：{change_at_ms} / {at_ms}"
+                )
 
 
 def validate_units(
@@ -142,7 +218,7 @@ def main() -> int:
     template_ids = {
         template.get("id")
         for template in (template_index or {}).get("templates", [])
-        if "superseded" not in str(template.get("hyperframes_status", "")).lower()
+        if "superseded" not in template_status(template).lower()
     }
     role_run: list[str] = []
 
@@ -195,9 +271,30 @@ def main() -> int:
         design = shot.get("visual_design") or {}
         if not design.get("final_state"):
             errors.append(f"{shot.get('id')} 缺少 final_state")
-        if not shot.get("changes"):
+        changes = shot.get("changes") or []
+        if not changes:
             errors.append(f"{shot.get('id')} 缺少有效变化")
-        for change in shot.get("changes", []):
+        validate_narration_binding(
+            shot=shot,
+            changes=changes,
+            cues_by_id=cues_by_id,
+            errors=errors,
+        )
+        if role == "A":
+            duration_ms = shot.get("end_ms", 0) - shot.get("start_ms", 0)
+            required_changes = required_a_roll_change_count(duration_ms)
+            if len(changes) < required_changes:
+                errors.append(
+                    f"{shot.get('id')} 时长 {duration_ms}ms 的 A-roll 至少需要 "
+                    f"{required_changes} 个内容驱动的动作状态，当前为 {len(changes)} 个"
+                )
+            narration_beats = shot.get("narration_beats") or []
+            if len(narration_beats) < required_changes:
+                errors.append(
+                    f"{shot.get('id')} 至少需要 {required_changes} 个 narration_beats，"
+                    f"用于把 A-roll 动作绑定到旁白短语"
+                )
+        for change in changes:
             at_ms = change.get("at_ms")
             if not isinstance(at_ms, int) or not shot["start_ms"] <= at_ms <= shot["end_ms"]:
                 errors.append(f"{shot.get('id')} 的变化时间 {at_ms} 超出镜头语义边界")
@@ -212,9 +309,10 @@ def main() -> int:
             role == "B"
             and shot.get("material_type") == "no-material"
             and shot.get("presentation_type") == "infographic"
-            and production.get("primary_tool") != "hyperframes"
+            and production.get("primary_tool") not in {"hyperframes", "remotion"}
         ):
-            errors.append(f"{shot.get('id')} 的无素材信息动画必须由 hyperframes 作为 primary_tool")
+            errors.append(f"{shot.get('id')} 的无素材信息动画必须选择 hyperframes 或 remotion")
+        errors.extend(validate_runtime_decision(shot, args.project.parent.parent, template_index))
         fallback_tools = production.get("fallback_tools")
         if not isinstance(fallback_tools, list):
             errors.append(f"{shot.get('id')} production.fallback_tools 必须为数组")

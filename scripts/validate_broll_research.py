@@ -7,8 +7,11 @@ import argparse
 import json
 from pathlib import Path
 
+from broll_runtime import RUNTIMES, template_runtime, template_status
+
 
 DECISIONS = {
+    "reuse-native-source",
     "port-external-skeleton",
     "study-and-reimplement",
     "custom-after-external-review",
@@ -46,7 +49,8 @@ def qualified_local_ids(index: dict) -> set[str]:
         str(template.get("id"))
         for template in index.get("templates") or []
         if template.get("id")
-        and str(template.get("hyperframes_status")) == "animation-verified"
+        and template_status(template) == "animation-verified"
+        and template_runtime(template) in RUNTIMES
         and not str(template.get("source_file", "")).lower().endswith(".svg")
     }
 
@@ -184,7 +188,7 @@ def validate(
             errors.append(f"{shot_id} extracted_skeleton.phase_order 至少需要三个阶段")
 
         selected = record.get("selected_candidate")
-        if decision in {"port-external-skeleton", "study-and-reimplement"}:
+        if decision in {"reuse-native-source", "port-external-skeleton", "study-and-reimplement"}:
             if not selected or selected not in inspected_ids:
                 errors.append(f"{shot_id} 决策为 {decision}，但 selected_candidate 未被检查")
             if selected and template_id != f"external:{selected}":
@@ -198,6 +202,13 @@ def validate(
             source = record.get("implementation_source") or {}
             if source.get("candidate_id") != selected:
                 errors.append(f"{shot_id} implementation_source.candidate_id 必须等于 selected_candidate")
+            if decision == "reuse-native-source":
+                runtime = (shot.get("production") or {}).get("primary_tool")
+                runtime_decision = (shot.get("production") or {}).get("runtime_decision") or {}
+                if runtime not in RUNTIMES or source.get("runtime") != runtime:
+                    errors.append(f"{shot_id} 原生研究来源 runtime 必须等于 primary_tool")
+                if runtime_decision.get("mode") != "native-reuse" or runtime_decision.get("source_runtime") != runtime:
+                    errors.append(f"{shot_id} 原生研究决策必须与 runtime_decision 一致")
         elif decision == "custom-after-external-review":
             if selected is not None:
                 errors.append(f"{shot_id} 自建决策的 selected_candidate 必须为 null")

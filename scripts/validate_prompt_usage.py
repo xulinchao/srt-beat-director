@@ -11,7 +11,24 @@ from pathlib import Path
 
 
 VALID_STATUSES = {"prepared", "used", "completed", "failed"}
-ACTIVE_STATUSES = {"used", "completed"}
+A_ROLL_MULTI_STATE_THRESHOLD_MS = 4000
+A_ROLL_THREE_STATE_THRESHOLD_MS = 6000
+A_ROLL_SEQUENCE_MODES = {"single-state", "state-sequence", "continuous-motion"}
+B_ROLL_SEQUENCE_MODES = {
+    "single-state",
+    "state-sequence",
+    "continuous-motion",
+    "verified-media-sequence",
+    "text-motion",
+}
+
+
+def required_a_roll_beat_count(duration_ms: int) -> int:
+    if duration_ms >= A_ROLL_THREE_STATE_THRESHOLD_MS:
+        return 3
+    if duration_ms >= A_ROLL_MULTI_STATE_THRESHOLD_MS:
+        return 2
+    return 1
 
 
 def parse_args() -> argparse.Namespace:
@@ -38,6 +55,10 @@ def sha256(path: Path) -> str:
 def resolve_project_path(project_dir: Path, value: str) -> Path:
     candidate = Path(value)
     return candidate if candidate.is_absolute() else project_dir / candidate
+
+
+def normalize_text(value: object) -> str:
+    return "".join(str(value or "").split())
 
 
 def validate_record(
@@ -81,8 +102,8 @@ def validate_record(
     status = record.get("status")
     if status not in VALID_STATUSES:
         errors.append(f"{label} status 无效：{status}")
-    if stage == "produced" and status not in ACTIVE_STATUSES:
-        errors.append(f"{label} 尚未实际使用：status={status}")
+    if stage == "produced" and status != "completed":
+        errors.append(f"{label} 尚未完成生产：status={status}")
 
     if selection_report is not None:
         if record.get("selection_report") != selection_report:
@@ -99,6 +120,192 @@ def validate_record(
                 path_value = str(value.get("path") if isinstance(value, dict) else value)
                 if not path_value or not resolve_project_path(project_dir, path_value).is_file():
                     errors.append(f"{label} 输出不存在：{path_value or '<empty>'}")
+
+
+def validate_a_roll_sequence(
+    *,
+    record_path: Path,
+    project_dir: Path,
+    shot: dict,
+    stage: str,
+    errors: list[str],
+) -> None:
+    label = record_path.relative_to(project_dir).as_posix()
+    if not record_path.is_file():
+        return
+    try:
+        record = load(record_path)
+    except (OSError, json.JSONDecodeError):
+        return
+
+    sequence = record.get("action_sequence")
+    if not isinstance(sequence, dict):
+        errors.append(f"{label} 缺少 action_sequence")
+        return
+
+    duration_ms = int(shot.get("end_ms", 0)) - int(shot.get("start_ms", 0))
+    required_beats = required_a_roll_beat_count(duration_ms)
+    mode = sequence.get("mode")
+    if mode not in A_ROLL_SEQUENCE_MODES:
+        errors.append(f"{label} action_sequence.mode 无效：{mode}")
+    if required_beats > 1 and mode == "single-state":
+        errors.append(f"{label} 时长 {duration_ms}ms，不能使用 single-state")
+    if mode == "single-state" and not str(sequence.get("static_reason") or "").strip():
+        errors.append(f"{label} single-state 必须说明 static_reason")
+
+    beats = sequence.get("beats")
+    plan_beats = shot.get("narration_beats") or []
+    if not isinstance(plan_beats, list) or not plan_beats:
+        errors.append(f"{label} 对应视觉计划缺少 narration_beats")
+        return
+    if not isinstance(beats, list) or len(beats) < required_beats:
+        actual = len(beats) if isinstance(beats, list) else 0
+        errors.append(f"{label} 至少需要 {required_beats} 个动作节拍，当前为 {actual} 个")
+        return
+    if len(beats) != len(plan_beats):
+        errors.append(
+            f"{label} action_sequence 必须落实全部计划节拍，"
+            f"当前为 {len(beats)} / {len(plan_beats)}"
+        )
+
+    evidence_paths: list[str] = []
+    evidence_times: list[int] = []
+    for position, beat in enumerate(beats, start=1):
+        beat_label = f"{label} beat-{position}"
+        if not isinstance(beat, dict):
+            errors.append(f"{beat_label} 必须为对象")
+            continue
+        at_ms = beat.get("at_ms")
+        if not isinstance(at_ms, int) or not shot["start_ms"] <= at_ms <= shot["end_ms"]:
+            errors.append(f"{beat_label} at_ms 超出镜头边界")
+        for key in ("trigger_text", "visual_state", "implementation"):
+            if not str(beat.get(key) or "").strip():
+                errors.append(f"{beat_label} 缺少 {key}")
+        if position <= len(plan_beats):
+            planned = plan_beats[position - 1]
+            if at_ms != planned.get("at_ms"):
+                errors.append(f"{beat_label} at_ms 与视觉计划节拍不一致")
+            if normalize_text(beat.get("trigger_text")) != normalize_text(planned.get("trigger_text")):
+                errors.append(f"{beat_label} trigger_text 与视觉计划旁白短语不一致")
+
+        if stage != "produced":
+            continue
+        evidence = beat.get("evidence")
+        if not isinstance(evidence, dict):
+            errors.append(f"{beat_label} 缺少 produced evidence")
+            continue
+        artifact = str(evidence.get("artifact") or "")
+        if not artifact:
+            errors.append(f"{beat_label} evidence.artifact 不能为空")
+        elif not resolve_project_path(project_dir, artifact).is_file():
+            errors.append(f"{beat_label} evidence.artifact 不存在：{artifact}")
+        else:
+            evidence_paths.append(artifact)
+        artifact_time_ms = evidence.get("artifact_time_ms")
+        if mode == "continuous-motion":
+            if not isinstance(artifact_time_ms, int) or artifact_time_ms < 0:
+                errors.append(f"{beat_label} continuous-motion 需要非负 artifact_time_ms")
+            else:
+                evidence_times.append(artifact_time_ms)
+
+    if stage == "produced" and mode == "state-sequence":
+        if len(set(evidence_paths)) < len(plan_beats):
+            errors.append(f"{label} state-sequence 必须为每个动作状态提供不同的证据资产")
+    if stage == "produced" and mode == "continuous-motion":
+        if len(set(evidence_times)) < len(plan_beats):
+            errors.append(f"{label} continuous-motion 必须为每个动作状态提供不同的证据时间点")
+
+
+def validate_b_roll_sequence(
+    *,
+    record_path: Path,
+    project_dir: Path,
+    shot: dict,
+    stage: str,
+    errors: list[str],
+) -> None:
+    label = record_path.relative_to(project_dir).as_posix()
+    if not record_path.is_file():
+        return
+    try:
+        record = load(record_path)
+    except (OSError, json.JSONDecodeError):
+        return
+
+    sequence = record.get("motion_sequence")
+    if not isinstance(sequence, dict):
+        errors.append(f"{label} 缺少 motion_sequence")
+        return
+    mode = sequence.get("mode")
+    if mode not in B_ROLL_SEQUENCE_MODES:
+        errors.append(f"{label} motion_sequence.mode 无效：{mode}")
+
+    plan_beats = shot.get("narration_beats") or []
+    beats = sequence.get("beats")
+    if not isinstance(plan_beats, list) or not plan_beats:
+        errors.append(f"{label} 对应视觉计划缺少 narration_beats")
+        return
+    if not isinstance(beats, list):
+        errors.append(f"{label} motion_sequence.beats 必须为数组")
+        return
+    if len(beats) != len(plan_beats):
+        errors.append(
+            f"{label} motion_sequence 必须落实全部计划节拍，"
+            f"当前为 {len(beats)} / {len(plan_beats)}"
+        )
+    if mode == "single-state":
+        duration_ms = int(shot.get("end_ms", 0)) - int(shot.get("start_ms", 0))
+        if len(plan_beats) != 1 or duration_ms >= A_ROLL_MULTI_STATE_THRESHOLD_MS:
+            errors.append(f"{label} 仅单节拍且短于 4000ms 时允许 single-state")
+        if not str(sequence.get("static_reason") or "").strip():
+            errors.append(f"{label} single-state 必须说明 static_reason")
+
+    evidence_paths: list[str] = []
+    evidence_times: list[int] = []
+    for position, beat in enumerate(beats, start=1):
+        beat_label = f"{label} beat-{position}"
+        if not isinstance(beat, dict):
+            errors.append(f"{beat_label} 必须为对象")
+            continue
+        for key in ("trigger_text", "visual_state", "implementation"):
+            if not str(beat.get(key) or "").strip():
+                errors.append(f"{beat_label} 缺少 {key}")
+        at_ms = beat.get("at_ms")
+        if not isinstance(at_ms, int) or not shot["start_ms"] <= at_ms <= shot["end_ms"]:
+            errors.append(f"{beat_label} at_ms 超出镜头边界")
+        if position <= len(plan_beats):
+            planned = plan_beats[position - 1]
+            if at_ms != planned.get("at_ms"):
+                errors.append(f"{beat_label} at_ms 与视觉计划节拍不一致")
+            if normalize_text(beat.get("trigger_text")) != normalize_text(planned.get("trigger_text")):
+                errors.append(f"{beat_label} trigger_text 与视觉计划旁白短语不一致")
+
+        if stage != "produced":
+            continue
+        evidence = beat.get("evidence")
+        if not isinstance(evidence, dict):
+            errors.append(f"{beat_label} 缺少 produced evidence")
+            continue
+        artifact = str(evidence.get("artifact") or "")
+        if not artifact:
+            errors.append(f"{beat_label} evidence.artifact 不能为空")
+        elif not resolve_project_path(project_dir, artifact).is_file():
+            errors.append(f"{beat_label} evidence.artifact 不存在：{artifact}")
+        else:
+            evidence_paths.append(artifact)
+        artifact_time_ms = evidence.get("artifact_time_ms")
+        if mode in {"continuous-motion", "text-motion"}:
+            if not isinstance(artifact_time_ms, int) or artifact_time_ms < 0:
+                errors.append(f"{beat_label} {mode} 需要非负 artifact_time_ms")
+            else:
+                evidence_times.append(artifact_time_ms)
+
+    if stage == "produced" and mode in {"state-sequence", "verified-media-sequence"}:
+        if len(set(evidence_paths)) < len(plan_beats):
+            errors.append(f"{label} {mode} 必须为每个节拍提供不同的证据资产")
+    if stage == "produced" and mode in {"continuous-motion", "text-motion"}:
+        if len(set(evidence_times)) < len(plan_beats):
+            errors.append(f"{label} {mode} 必须为每个节拍提供不同的证据时间点")
 
 
 def validate(project_dir: Path, prompts_path: Path, stage: str) -> dict:
@@ -149,11 +356,12 @@ def validate(project_dir: Path, prompts_path: Path, stage: str) -> dict:
         for shot in plan.get("shots") or []:
             shot_id = str(shot.get("id") or "unknown")
             if shot.get("screen_role") == "A":
-                required = {"a-roll-image-v1"}
+                required = {"a-roll-image-v1", "a-roll-action-sequence-v1"}
                 if fixed_character:
                     required.add("a-roll-view-v1")
+                record_path = project_dir / "prompts" / "a-scenes" / f"{shot_id}.json"
                 validate_record(
-                    record_path=project_dir / "prompts" / "a-scenes" / f"{shot_id}.json",
+                    record_path=record_path,
                     project_dir=project_dir,
                     expected_subject=shot_id,
                     required_prompt_ids=required,
@@ -162,10 +370,18 @@ def validate(project_dir: Path, prompts_path: Path, stage: str) -> dict:
                     errors=errors,
                     checked=checked,
                 )
+                validate_a_roll_sequence(
+                    record_path=record_path,
+                    project_dir=project_dir,
+                    shot=shot,
+                    stage=stage,
+                    errors=errors,
+                )
             elif shot.get("screen_role") == "B":
                 selection = f"planning/template-selection/{shot_id}.json"
+                record_path = project_dir / "prompts" / "b-scenes" / f"{shot_id}.json"
                 validate_record(
-                    record_path=project_dir / "prompts" / "b-scenes" / f"{shot_id}.json",
+                    record_path=record_path,
                     project_dir=project_dir,
                     expected_subject=shot_id,
                     required_prompt_ids={"b-roll-motion-selection-v1"},
@@ -174,6 +390,13 @@ def validate(project_dir: Path, prompts_path: Path, stage: str) -> dict:
                     errors=errors,
                     checked=checked,
                     selection_report=selection,
+                )
+                validate_b_roll_sequence(
+                    record_path=record_path,
+                    project_dir=project_dir,
+                    shot=shot,
+                    stage=stage,
+                    errors=errors,
                 )
 
         bible_path = project_dir / "config" / "character-bible.json"

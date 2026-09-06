@@ -39,11 +39,11 @@
 ## 外部候选状态
 
 - `reference-only`：只有镜头配方或演示，必须重新实现。
-- `port-required`：存在其他框架源码，必须移植并验证 seek-safe。
+- `port-required`：存在源框架源码，尚无合格本地模板。按 [制作工具决策](broll-runtime-selection.md) 选择原生制作或跨框架移植，并验证 seek-safe；该目录状态本身不强制移植。
 - `structure-study-only`：许可证未确认，只允许抽象研究结构，不能复制源码。
 - `local-template`：已进入本地模板索引，并按索引中的状态判断是否可直接使用。
 
-外部候选不是本地模板。只有完成许可证记录、HyperFrames 移植、目标画幅与 seek-safe 验证后，才能加入 `templates/template-index.json`。
+外部候选不是本地模板。只有完成许可证记录、选定框架的实际渲染、目标画幅与 seek-safe 验证后，才能加入 `templates/template-index.json`，并记录 `runtime` 与 `animation_status`。Remotion 原生效果无需先转成 HyperFrames 才能收录。
 
 发布后的 Skill 可先独立校验目录结构，不要求本地存在开发阶段的外部仓库副本：
 

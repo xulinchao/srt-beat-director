@@ -8,6 +8,8 @@ import json
 import sys
 from pathlib import Path
 
+from broll_runtime import RUNTIMES, template_runtime, template_status
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
@@ -69,9 +71,9 @@ def select(
     mapped_template_ids = set((mapped_structure or {}).get("local_template_ids") or [])
     candidates: list[dict] = []
     for template in index.get("templates") or []:
-        exact_pattern_match = bool(semantic_pattern) and template.get("semantic_structure") == semantic_pattern
         exact_semantic_match = template.get("semantic_structure") == semantic_structure
         mapped_template_match = template.get("id") in mapped_template_ids
+        exact_pattern_match = (exact_semantic_match or mapped_template_match) and bool(semantic_pattern) and template.get("semantic_pattern") == semantic_pattern
         if not exact_pattern_match and not exact_semantic_match and not mapped_template_match:
             continue
         item_range = template.get("item_range") or [0, 0]
@@ -84,7 +86,7 @@ def select(
         if aspect_ratio not in aspect_ratios:
             continue
         bonus, implementation_required, status_qualified = readiness(
-            str(template.get("hyperframes_status", ""))
+            template_status(template)
         )
         if bonus <= -1000:
             continue
@@ -92,6 +94,7 @@ def select(
         source_file = str(template.get("source_file") or "")
         qualified_for_reuse = (
             status_qualified
+            and template_runtime(template) in RUNTIMES
             and bool(template.get("preview"))
             and len(animation_phases) >= 3
             and not source_file.lower().endswith(".svg")
@@ -106,6 +109,8 @@ def select(
                 "implementation_required": implementation_required,
                 "qualified_for_reuse": qualified_for_reuse,
                 "hyperframes_status": template.get("hyperframes_status"),
+                "runtime": template_runtime(template),
+                "animation_status": template_status(template),
                 "source_file": template.get("source_file"),
                 "animation_phases": animation_phases,
                 "known_limits": template.get("known_limits") or [],
@@ -149,6 +154,8 @@ def select(
     return {
         "schema_version": "0.1",
         "selection_policy": "single-source-per-shot",
+        "runtime_policy": "references/broll-runtime-selection.md",
+        "selection_is_provisional": True,
         "status": status,
         "query": {
             "semantic_structure": semantic_structure,
@@ -177,11 +184,13 @@ def markdown(report: dict) -> str:
         result = (
             f"- 模板：`{selected['template_id']}`\n"
             f"- 需要实现动画：`{str(selected['implementation_required']).lower()}`\n"
-            f"- 状态：`{selected['hyperframes_status']}`"
+            f"- 状态：`{selected['animation_status']}`\n"
+            f"- 原生制作工具：`{selected['runtime']}`\n"
+            "- 此结果是候选推荐；检查预览、语义和节拍后记录 runtime_decision。"
         )
     else:
         prototype_lines = [
-            f"- `{item['template_id']}`：`{item['hyperframes_status']}`（仅设计候选，不能阻断外部研究）"
+            f"- `{item['template_id']}`：`{item['animation_status']}`（仅设计候选，不能阻断外部研究）"
             for item in report.get("local_candidates") or []
             if not item.get("qualified_for_reuse")
         ]

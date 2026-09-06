@@ -91,6 +91,28 @@ def validate(project_dir: Path) -> dict:
             errors.append("样片批准 SHA-256 与文件不一致")
         validate_review_source("样片", sample_approval)
 
+    final_status = str(statuses.get("final", ""))
+    final_approval = approvals.get("final") or {}
+    final_artifact = project.get("final_artifact")
+    if final_status in {"rendered-pending-user-review", "approved"}:
+        if not isinstance(final_artifact, dict):
+            errors.append(f"最终状态为 {final_status}，但缺少 final_artifact")
+        else:
+            artifact_path = project_dir / str(final_artifact.get("path") or "")
+            artifact_hash = str(final_artifact.get("sha256") or "").lower()
+            if not final_artifact.get("path") or not artifact_hash:
+                errors.append("final_artifact 缺少 path 或 sha256")
+            elif not artifact_path.is_file():
+                errors.append(f"最终文件不存在：{final_artifact.get('path')}")
+            elif sha256(artifact_path) != artifact_hash:
+                errors.append("final_artifact SHA-256 与最终文件不一致")
+    if final_status == "approved":
+        if str(final_approval.get("sha256") or "").lower() != str((final_artifact or {}).get("sha256") or "").lower():
+            errors.append("最终状态为 approved，但批准 SHA-256 与 final_artifact 不一致")
+        validate_review_source("最终成片", final_approval)
+    elif final_approval.get("sha256"):
+        warnings.append("最终成片未批准，但仍保留非空批准 SHA-256")
+
     manifests = list((project_dir / "hyperframes").glob("**/manifest.json")) if (project_dir / "hyperframes").exists() else []
     for manifest_path in manifests:
         manifest = load(manifest_path)

@@ -7,6 +7,8 @@ import argparse
 import json
 from pathlib import Path
 
+from broll_runtime import RUNTIMES, template_runtime, template_status
+
 
 ALLOWED_STATUSES = {
     "styleframe-only",
@@ -35,11 +37,13 @@ def validate(index_path: Path) -> dict:
         if template_id in ids:
             errors.append(f"模板 ID 重复：{template_id}")
         ids.add(template_id)
-        for key in ("semantic_structure", "item_range", "duration_ms", "aspect_ratios", "source_file", "source", "hyperframes_status"):
+        for key in ("semantic_structure", "item_range", "duration_ms", "aspect_ratios", "source_file", "source"):
             if template.get(key) in (None, "", []):
                 errors.append(f"{template_id} 缺少 {key}")
 
-        status = str(template.get("hyperframes_status", ""))
+        status = template_status(template)
+        if template_runtime(template) not in RUNTIMES:
+            errors.append(f"{template_id} runtime 必须为 hyperframes 或 remotion")
         if status not in ALLOWED_STATUSES:
             errors.append(f"{template_id} 状态无效：{status}")
         source_file = template.get("source_file")

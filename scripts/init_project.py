@@ -19,6 +19,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--width", required=True, type=int)
     parser.add_argument("--height", required=True, type=int)
     parser.add_argument("--fps", type=int, default=30)
+    parser.add_argument("--primary-timeline", choices=["chatcut", "hyperframes"], default="chatcut")
+    parser.add_argument("--review-mode", choices=["manual", "continuous"], default="manual")
     parser.add_argument(
         "--a-scene-mode",
         choices=["fixed-character-micro-scene", "full-ai-scene"],
@@ -67,7 +69,7 @@ def main() -> int:
     shutil.copy2(args.audio, input_dir / audio_name)
 
     project = {
-        "schema_version": "0.2",
+        "schema_version": "0.3",
         "project_id": args.project_dir.name,
         "inputs": {"srt": "input/source.srt", "audio": f"input/{audio_name}"},
         "output": {"directory": "render", "filename": "final.mp4"},
@@ -77,6 +79,14 @@ def main() -> int:
             "height": args.height,
             "fps": args.fps,
             "status": "user-specified",
+        },
+        "primary_timeline": args.primary_timeline,
+        "review_mode": args.review_mode,
+        "chatcut": {
+            "project_id": None,
+            "project_name": None,
+            "timeline_id": None,
+            "timeline_name": None,
         },
         "a_scene_mode": args.a_scene_mode,
         "a_scene_mode_status": "user-specified",
@@ -95,10 +105,12 @@ def main() -> int:
             "final": "pending",
         },
         "approvals": {
-            "plan": {"sha256": None, "approved_at": None},
-            "visual_baseline": {"sha256": None, "approved_at": None},
-            "sample": {"sha256": None, "approved_at": None},
+            "plan": {"sha256": None, "approved_at": None, "review_source": None},
+            "visual_baseline": {"sha256": None, "approved_at": None, "review_source": None},
+            "sample": {"sha256": None, "approved_at": None, "review_source": None, "artifact": None},
+            "final": {"sha256": None, "approved_at": None, "review_source": None},
         },
+        "final_artifact": None,
     }
     (config_dir / "project.json").write_text(
         json.dumps(project, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"

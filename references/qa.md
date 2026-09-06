@@ -1,5 +1,9 @@
 # 门控与验收
 
+按本次交付阶段使用对应门控；已有检查绑定的输入和配置未变化时可复用，变更后重查受影响内容。分析、分镜、素材或局部修复不要求补做整片生产；完整成片仍须通过全部适用门控。
+
+审核模式沿用项目配置和本次用户授权。`manual` 在计划、视觉基线、候选方案、样片和最终成片的适用审阅点等待用户确认；`continuous` 只在用户已明确授权自检后继续时使用，完成同一检查并记录 `review_source=agent-qa-under-user-authorization`。已有授权不重复询问，代理自检不得写成用户确认；新增计费、账户、发布和系统权限仍按实际授权范围处理。
+
 ## 1. 预检门
 
 阻塞项：
@@ -19,6 +23,8 @@
 - 镜头 ID 从 `S001` 连续递增，时间以毫秒呈现，表格后有素材、方向和高难镜头三个检查部分；
 - 从 0ms 到音频结束的所有字幕外空隙都有明确保持策略，不出现未定义帧；
 - 每镜都有 `viewer_takeaway`、A/B 职责、最终画面和至少一个有意义的变化或明确的静止理由；
+- A-roll 的动作状态数量符合时长门槛，并通过 `narration_beats` 绑定原始旁白短语；
+- 每镜 `changes` 与 `narration_beats` 数量、顺序和毫秒点一致；每个 beat 的短语逐字来自其 `cue_ids`，时间等于首个 cue 起点；
 - B 画面需要真实素材时，来源已存在或被标记为素材请求；
 - 全片只使用一种 A 画面生产模式；
 - 没有为了 A/B 交替而破坏完整语义。
@@ -44,14 +50,18 @@
 - 文字、数字和关系是否与口播一致；
 - 真实素材有来源，生成素材有提示词、模型、参数和版本；
 - 每个进入制作的 A-roll 与 B-roll 都有通过 `validate_prompt_usage.py --stage prepared` 的逐镜提示词实例；不能用“已阅读生产提示词”代替实际实例；
+- 每个 A-roll 都使用 `a-roll-action-sequence-v1`。4000ms 到 5999ms 至少两个动作状态，6000ms 及以上至少三个；单张图加 Slow Push、呼吸、眨眼或字幕出现不计入；
+- 每个 B-roll 都有与视觉计划同序的 `motion_sequence`；模板默认动画时间不得替代旁白节拍；
 - 目标画幅内无裁切、溢出或字幕区冲突。
 - `no-material + infographic` B-roll 在没有合格本地模板时，存在通过校验的 `planning/broll-research/<shot-id>.json`；
 - 外部候选落实到具体镜头卡和实现文件；选择自建时，每个候选都有拒绝理由和可追溯的运动原则；
-- 静态 SVG 只作为动画组件使用，不单独充当已完成 B-roll；完成动效至少有三个有效阶段、可审阅预览和实际渲染结果。
+- 静态 SVG 只作为动画组件使用，不单独充当已完成 B-roll；动效须有可审阅预览和实际渲染结果。本地认证模板与外部研究骨架至少有三个阶段；镜头的实际信息节拍按批准的 `narration_beats` 验收，不机械补足数量。
 
 失败资产标记为 `stale` 或 `rejected`。通过文件哈希复用，不因布局或文字微调重新生成。
 
-## 5. HyperFrames 样片门
+## 5. 动效与混合样片门
+
+程序化 B-roll 的 `production.runtime_decision` 必须通过计划校验，选择依据能定位预览、源码或诊断记录。若全片混用 HyperFrames 与 Remotion，样片应包含两者实际渲染结果，核对统一规格、视觉风格、正常播放速度和接缝。只选一种框架时不要求额外制作另一种。
 
 样片至少包含一个 A、一个 B、一次完整 A/B 切换、一个一致性样例和一个典型信息动效。检查：
 
@@ -69,7 +79,7 @@
 ## 6. 最终门
 
 - 使用最新已确认的视觉计划、视觉基线和样片版本；
-- HyperFrames lint/check/visual validation 按当前工具规范通过；
+- 实际使用的框架按其工具规范通过结构、渲染与视觉检查；HyperFrames 运行对应 lint/check，Remotion 运行项目检查并验证实际渲染与抽帧；
 - 音频结束、时间轴结束和视频结束的误差不超过 `max(1 帧, 50ms)`；
 - 开头、镜头间空隙和尾部均保持预期画面，无黑帧、闪回或意外重置；
 - 对每个镜头至少检查开始、中点和结束附近的稳定帧；对转场另检查前后接缝；
@@ -77,6 +87,8 @@
 - 所有缺失素材、保留意见和已知限制在 QA 报告中明确列出；
 - `manifest.json` 能定位并校验全部输入、真源、资产、工程、报告和最终 MP4。
 - `validate_prompt_usage.py --stage produced` 通过；每个完成镜头的提示词实例都绑定当前生产提示词 SHA-256，并能定位实际输出。
+- A-roll 的每个动作节拍都能定位到不同状态资产，或同一连续动画中的不同证据时间点；计划多个状态但成片只使用单张图时不得通过。
+- B-roll 的每个信息节拍都能定位到渲染资产中的不同状态时间点，并映射到主时间线素材实例；模板选择报告或终态截图不能作为成片证据。
 
 ChatCut 主时间线路径另检查：
 
@@ -84,7 +96,21 @@ ChatCut 主时间线路径另检查：
 - 成片使用保留原版本后的明确时间线，时间线 ID 已记录；
 - `visual-plan.json` 中每个镜头都能映射到实际时间线素材实例和准确时间范围；
 - 标为 B-roll 的镜头确实使用图解、动效、截图、录屏或信息文字，不由装饰性 A-roll 静态图占位；
-- HyperFrames 渲染结果已成为 ChatCut 素材并实际放置，而不是只存在于本地目录；
+- HyperFrames / Remotion 渲染结果已成为 ChatCut 素材并实际放置，而不是只存在于本地目录；
 - 最终 MP4 由 ChatCut Desktop 导出，且导出文件存在、非空、时长合理。
 
-最终交付至少包含：最终 MP4、`qa-report.json/.md` 和 `manifest.json`。使用 HyperFrames 时保留对应源工程和渲染文件；使用 ChatCut 时另保留 `timeline-audit.json/.md`。除非用户明确要求，不烧录字幕，不添加 BGM、复杂音效或非必要 3D 动画。
+最终交付至少包含：最终 MP4、`qa-report.json/.md` 和 `manifest.json`。使用 HyperFrames 或 Remotion 时保留各自源工程和渲染文件；使用 ChatCut 时另保留 `timeline-audit.json/.md`。除非用户明确要求，不烧录字幕，不添加 BGM、复杂音效或非必要 3D 动画。
+
+## 7. 交付闭环
+
+完成逐镜检查和 §6 的提示词生产证据校验后，运行：
+
+```text
+python scripts/validate_delivery.py \
+  --project-dir <project> \
+  --production-prompts references/production-prompts.md \
+  --mode review \
+  --out-dir <project>/reports
+```
+
+`review` 模式只证明候选成片、提示词生产证据、时间线落实、QA 与 manifest 指向同一文件和同一时间线。`manual` 下保持 `status.final=rendered-pending-user-review`，等待用户批准；`continuous` 下由获授权的代理完成最终 QA。实际批准后写入 `approvals.final`（当前成片哈希、时间和真实审核来源），设置 `status.final=approved`，再用 `--mode final` 验证；只有通过后才可称为最终批准交付。

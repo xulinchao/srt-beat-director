@@ -9,12 +9,13 @@
 3. 至少检查 `min(2, 当前结构候选数)` 个候选。每个候选先读镜头卡；状态为 `port-required` 时还要读镜头卡指向的具体实现文件。
 4. 比较语义适配、元素关系、主要运动、阶段顺序、原框架、许可证和最小改造范围；比较结果只用于选出一个唯一实现来源。
 5. 选择以下一种决策：
-   - `port-external-skeleton`：许可证允许移植，保留骨架并改造成当前主实现载体（HyperFrames 或 ChatCut Motion Graphic）；
-   - `study-and-reimplement`：只允许研究结构，在当前主实现载体中按单一来源重新实现；
+   - `reuse-native-source`：合格的源码在原框架制作，`implementation_source.runtime` 与镜头 `primary_tool` 一致；工具决策使用 `native-reuse`，不执行跨框架移植；
+   - `port-external-skeleton`：许可证允许移植，按 [制作工具决策](broll-runtime-selection.md) 说明原生制作不适合的原因，保留骨架并移植到选定框架；
+   - `study-and-reimplement`：只允许研究结构，在选定框架中按单一来源重新实现；
    - `custom-after-external-review`：候选均不适合，记录逐项拒绝理由后从零实现，但仍吸收已验证的运动原则。
 6. 把记录保存到 `planning/broll-research/<shot-id>.json`，运行 `scripts/validate_broll_research.py`。验证通过前禁止实现该 B-roll。
 
-每个镜头必须有且只有一个 `selected_candidate`。`inspected_candidates` 可以包含多个候选，但未选候选只能写拒绝理由，不得把其运动阶段、布局或节奏混入 `migration_plan` 或最终实现。最终资产描述必须能映射到一个唯一的镜头卡/实现文件。
+复用或移植时必须有且只有一个 `selected_candidate`，自建时为 `null`。`inspected_candidates` 可以包含多个候选，但未选候选只能写拒绝理由，不得把其运动阶段、布局或节奏混入 `migration_plan` 或最终实现。最终资产描述必须能映射到一个唯一的镜头卡/实现文件。
 
 ```text
 python scripts/validate_broll_research.py \
