@@ -6,7 +6,7 @@
 2. 判断 `screen_role`。讲人、经历、态度和情绪用 A；讲知识增量、证据、关系和步骤用 B。
 3. B-roll 判断 `material_type`：`verified-media`、`no-material` 或 `text-only`。
 4. 判断一个主 `semantic_structure`：`comparison`、`aggregation`、`filtering`、`hierarchy`、`causality`、`replacement`、`expansion`；再用 `semantic_pattern` 描述具体骨架模式。
-5. 用主结构找到候选族，再用具体模式、信息项数量、时长、画幅匹配 `templates/template-index.json`。
+5. 先用主体、关系、变化描述检索意图，再用主结构找到候选族，再用具体模式、信息项数量、时长、画幅匹配 `templates/template-index.json`。
 6. 本地没有合适模板时，强制查询 `semantic-template-map.json` 中同结构的外部候选；读取具体镜头卡，`port-required` 候选还要读取实现文件。
 7. 输出候选与最小改造范围，按项目审核模式确认或自检后实现或移植。候选均不适合时必须记录逐项拒绝理由，不能直接从零创建 SVG。
 
@@ -17,7 +17,7 @@
 | `comparison` | 两个或多个对象有什么差异 | 相比、而、前后、两种 | 重点是动作导致结果时改用 `causality` |
 | `aggregation` | 多个来源如何汇到一个结果 | 汇总、统一、集中、整合 | 只是逐项列出时改用 `expansion` |
 | `filtering` | 如何从候选中保留目标 | 筛选、排除、选择、聚焦 | 只是强调一个已有结论时可用文字动效 |
-| `hierarchy` | 信息的父子、主次或层级是什么 | 分为、包含、上层、下层、核心 | 只有时间先后时改用 `causality` 或时间线 |
+| `hierarchy` | 信息的父子、主次或层级是什么 | 分为、包含、上层、下层、核心 | 只有时间先后时用 `expansion` 配时间线模式，不当作因果 |
 | `causality` | 一个动作或条件如何导致结果 | 因为、所以、触发、导致、如果就 | 只陈列相关性时不能强行画因果箭头 |
 | `replacement` | 同一位置或对象如何从旧状态变成新状态 | 从…变成、替代、升级、切换 | 两个状态需同时比较时改用 `comparison` |
 | `expansion` | 一个概念如何逐项展开 | 包括、分别是、步骤、展开来说 | 多项最终合成一个结果时改用 `aggregation` |

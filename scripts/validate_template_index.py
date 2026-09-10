@@ -53,6 +53,15 @@ def validate(index_path: Path) -> dict:
         if not source.get("license"):
             errors.append(f"{template_id} 缺少 source.license")
         if status == "animation-verified":
+            if template.get("metadata_version") == "1.0":
+                for key in ("element_relation", "text_capacity", "replaceable_fields", "validation_evidence"):
+                    if not template.get(key):
+                        errors.append(f"{template_id} 缺少 {key}")
+                for key in ("preview", "validation_evidence"):
+                    if not template.get(key) or not (project_dir / template[key]).is_file():
+                        errors.append(f"{template_id} {key} 文件不存在")
+            else:
+                warnings.append(f"{template_id} 旧模板未验证中文容量和渲染证据扩展字段")
             if str(source_file).lower().endswith(".svg"):
                 errors.append(f"{template_id} 标记 animation-verified，但 source_file 仍是静态 SVG")
             if not template.get("preview"):

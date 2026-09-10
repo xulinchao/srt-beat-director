@@ -1,5 +1,7 @@
 # B-roll 制作工具决策
 
+工具选择继承计划 design_ref 和角色互动要求。先检查分层资产、锚点、遮罩、中文字体和确定性时间轴的实现能力，再比较框架；运行框架不决定画风或人物是否参与。具体契约见 [design-system.md](design-system.md)。
+
 在完成镜头理解、检查候选预览与源码后，进入实现前读取本文件。它决定 `production.primary_tool`，不改变 A/B 职责、原始字幕、旁白节拍或主时间线。HyperFrames 与 Remotion 各自渲染镜头素材，在 ChatCut 中汇合；源码与内部动画仍在各自工程维护。
 
 ## 先筛选效果，再选择工具

@@ -70,6 +70,7 @@ def main() -> int:
 
     project = {
         "schema_version": "0.3",
+        "design_contract_version": "1.0",
         "project_id": args.project_dir.name,
         "inputs": {"srt": "input/source.srt", "audio": f"input/{audio_name}"},
         "output": {"directory": "render", "filename": "final.mp4"},

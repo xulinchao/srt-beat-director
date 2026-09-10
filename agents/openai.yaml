@@ -1,4 +1,4 @@
 interface:
   display_name: "知识 A/B-roll 成片"
   short_description: "把 SRT、MP3 或现有 ChatCut 项目制作成 A/B-roll 知识视频"
-  default_prompt: "使用 $knowledge-abroll-video，根据我的输入、已有项目和审核授权完成所需阶段：先按语义编排，通过相应检查后再制作，交付实际文件与可追溯报告。"
+  default_prompt: "使用 $knowledge-abroll-video，根据我的输入、已有项目和审核授权完成所需阶段：未指定且无已有规格时默认横屏 1920x1080、16:9、30fps；先按语义编排，通过相应检查后再制作，交付实际文件与可追溯报告。"

@@ -23,15 +23,22 @@ CANONICAL_SEMANTIC_STRUCTURES = {
     "expansion",
 }
 
-A_ROLL_MULTI_STATE_THRESHOLD_MS = 4000
-A_ROLL_THREE_STATE_THRESHOLD_MS = 6000
+GENERIC_VISUAL_STRUCTURES = {
+    "card",
+    "cards",
+    "list",
+    "infographic",
+    "darkui",
+    "卡片",
+    "三卡",
+    "列表",
+    "信息图",
+    "深色ui",
+}
 
 
 def required_a_roll_change_count(duration_ms: int) -> int:
-    if duration_ms >= A_ROLL_THREE_STATE_THRESHOLD_MS:
-        return 3
-    if duration_ms >= A_ROLL_MULTI_STATE_THRESHOLD_MS:
-        return 2
+    """Duration alone does not determine meaningful narrative states."""
     return 1
 
 
@@ -61,6 +68,88 @@ def sha256(path: Path) -> str:
 
 def normalize_text(value: object) -> str:
     return "".join(str(value or "").split())
+
+
+def normalize_structure(value: object) -> str:
+    return "".join(character for character in str(value or "").casefold() if character.isalnum())
+
+
+def validate_broll_structure_variety(
+    shots: list[dict],
+    exceptions: object,
+    errors: list[str],
+    warnings: list[str] | None = None,
+) -> None:
+    """Require concrete structures; flag reuse for semantic QA, not rejection."""
+    if warnings is None:
+        warnings = []
+    if not isinstance(exceptions, list):
+        errors.append("broll_structure_exceptions 必须为数组")
+        exceptions = []
+
+    previous_brolls: list[dict] = []
+    for shot in shots:
+        if shot.get("screen_role") != "B":
+            continue
+
+        shot_id = str(shot.get("id") or "unknown")
+        raw_structure = str(shot.get("visual_structure") or "").strip()
+        structure = normalize_structure(raw_structure)
+        if not structure:
+            errors.append(f"{shot_id} 缺少具体 visual_structure")
+        elif structure in GENERIC_VISUAL_STRUCTURES:
+            errors.append(f"{shot_id} visual_structure 过于笼统：{raw_structure}")
+
+        design = shot.get("visual_design") or {}
+        composition = normalize_structure(design.get("composition"))
+        semantic_pattern = normalize_structure(shot.get("semantic_pattern"))
+        template_id = normalize_structure(shot.get("template_id"))
+
+        for previous in previous_brolls[-3:]:
+            same_structure = bool(structure and structure == previous["structure"])
+            same_template_composition = bool(
+                template_id
+                and composition
+                and template_id == previous["template_id"]
+                and composition == previous["composition"]
+            )
+            same_pattern_composition = bool(
+                semantic_pattern
+                and composition
+                and semantic_pattern == previous["semantic_pattern"]
+                and composition == previous["composition"]
+            )
+            if not (same_structure or same_template_composition or same_pattern_composition):
+                continue
+
+            exception = next(
+                (
+                    item
+                    for item in exceptions
+                    if isinstance(item, dict)
+                    and item.get("shot_id") == shot_id
+                    and item.get("compared_shot_id") == previous["shot_id"]
+                ),
+                None,
+            )
+            if exception and str(exception.get("semantic_reason") or "").strip() and str(
+                exception.get("visible_difference") or ""
+            ).strip():
+                continue
+            warnings.append(
+                f"{shot_id} 与最近三个 B-roll 中的 {previous['shot_id']} 复用了同一视觉结构；"
+                "请审查解释收益，并在 broll_structure_exceptions 记录 semantic_reason 和 visible_difference；无需强制改布局"
+            )
+
+        previous_brolls.append(
+            {
+                "shot_id": shot_id,
+                "structure": structure,
+                "composition": composition,
+                "semantic_pattern": semantic_pattern,
+                "template_id": template_id,
+            }
+        )
 
 
 def validate_narration_binding(
@@ -283,6 +372,8 @@ def main() -> int:
         if role == "A":
             duration_ms = shot.get("end_ms", 0) - shot.get("start_ms", 0)
             required_changes = required_a_roll_change_count(duration_ms)
+            if len(changes) == 1 and not str(shot.get("static_reason") or "").strip():
+                errors.append(f"{shot.get('id')} 单状态 A-roll 必须填写 static_reason")
             if len(changes) < required_changes:
                 errors.append(
                     f"{shot.get('id')} 时长 {duration_ms}ms 的 A-roll 至少需要 "
@@ -328,6 +419,11 @@ def main() -> int:
             errors.append(f"{shot.get('id')} 缺少有效 production.asset_status")
         if asset_status in {"failed", "gap"} and not str(production.get("asset_gap") or "").strip():
             errors.append(f"{shot.get('id')} 的素材状态为 {asset_status}，但没有说明 asset_gap")
+
+    structure_exceptions = plan.get("broll_structure_exceptions", [])
+    if structure_exceptions is None:
+        structure_exceptions = []
+    validate_broll_structure_variety(shots, structure_exceptions, errors, warnings)
 
     policy = project.get("timeline_policy") or {}
     expected_policy = {

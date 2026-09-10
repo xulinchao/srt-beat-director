@@ -8,11 +8,11 @@ import hashlib
 import json
 import sys
 from pathlib import Path
+from validate_design import validate as validate_design
 
 
 VALID_STATUSES = {"prepared", "used", "completed", "failed"}
 A_ROLL_MULTI_STATE_THRESHOLD_MS = 4000
-A_ROLL_THREE_STATE_THRESHOLD_MS = 6000
 A_ROLL_SEQUENCE_MODES = {"single-state", "state-sequence", "continuous-motion"}
 B_ROLL_SEQUENCE_MODES = {
     "single-state",
@@ -24,10 +24,6 @@ B_ROLL_SEQUENCE_MODES = {
 
 
 def required_a_roll_beat_count(duration_ms: int) -> int:
-    if duration_ms >= A_ROLL_THREE_STATE_THRESHOLD_MS:
-        return 3
-    if duration_ms >= A_ROLL_MULTI_STATE_THRESHOLD_MS:
-        return 2
     return 1
 
 
@@ -148,8 +144,6 @@ def validate_a_roll_sequence(
     mode = sequence.get("mode")
     if mode not in A_ROLL_SEQUENCE_MODES:
         errors.append(f"{label} action_sequence.mode 无效：{mode}")
-    if required_beats > 1 and mode == "single-state":
-        errors.append(f"{label} 时长 {duration_ms}ms，不能使用 single-state")
     if mode == "single-state" and not str(sequence.get("static_reason") or "").strip():
         errors.append(f"{label} single-state 必须说明 static_reason")
 
@@ -158,6 +152,12 @@ def validate_a_roll_sequence(
     if not isinstance(plan_beats, list) or not plan_beats:
         errors.append(f"{label} 对应视觉计划缺少 narration_beats")
         return
+    if mode == "single-state" and len(plan_beats) != 1:
+        errors.append(f"{label} single-state 只能落实一个计划节拍")
+    if len(plan_beats) == 1:
+        static_reason = str(shot.get("static_reason") or "").strip()
+        if not static_reason or normalize_text(sequence.get("static_reason")) != normalize_text(static_reason):
+            errors.append(f"{label} 单状态必须继承计划 static_reason")
     if not isinstance(beats, list) or len(beats) < required_beats:
         actual = len(beats) if isinstance(beats, list) else 0
         errors.append(f"{label} 至少需要 {required_beats} 个动作节拍，当前为 {actual} 个")
@@ -338,6 +338,9 @@ def validate(project_dir: Path, prompts_path: Path, stage: str) -> dict:
 
     plan = load(plan_path)
     project = load(project_path)
+    design_report = validate_design(project_dir, stage)
+    errors.extend(design_report["errors"])
+    warnings.extend(design_report["warnings"])
     prompt_hash = sha256(prompts_path)
 
     validate_record(

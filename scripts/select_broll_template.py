@@ -23,6 +23,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--presentation-type", choices=("verified-media", "infographic", "text-motion"))
     parser.add_argument("--semantic-map", type=Path)
     parser.add_argument("--external-sources", type=Path)
+    parser.add_argument("--visual-style", type=Path, help="Bind selection to the current design_ref")
     parser.add_argument("--out", required=True, type=Path)
     return parser.parse_args()
 
@@ -235,6 +236,7 @@ def main() -> int:
         index = load(args.index)
         external = load(args.external_sources) if args.external_sources else None
         semantic_mapping = load(args.semantic_map) if args.semantic_map else None
+        visual = load(args.visual_style) if args.visual_style else {}
     except (OSError, json.JSONDecodeError) as exc:
         print(str(exc), file=sys.stderr)
         return 2
@@ -250,6 +252,11 @@ def main() -> int:
         args.presentation_type,
         args.semantic_pattern,
     )
+    if args.visual_style:
+        if not isinstance(visual.get("design_ref"), dict) or not all(visual["design_ref"].get(k) for k in ("path", "version", "sha256")):
+            print("visual-style 缺少完整 design_ref", file=sys.stderr)
+            return 2
+        report["design_ref"] = visual["design_ref"]
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     args.out.with_suffix(".md").write_text(markdown(report), encoding="utf-8")

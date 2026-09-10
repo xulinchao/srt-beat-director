@@ -58,6 +58,13 @@ def display_type(shot: dict) -> str:
 def design_text(shot: dict) -> str:
     design = shot.get("visual_design") or {}
     parts: list[str] = []
+    for label, key in (("功能", "function"), ("关系", "relation"), ("载体", "carrier"), ("角色职责", "character_role")):
+        if design.get(key):
+            parts.append(f"{label}：{design[key]}")
+    if design.get("interaction"):
+        parts.append("互动：" + json.dumps(design["interaction"], ensure_ascii=False))
+    if shot.get("screen_role") == "B" and shot.get("visual_structure"):
+        parts.append(f"结构：{shot['visual_structure']}")
     for label, key in (("主体", "subject"), ("构图", "composition"), ("景别", "shot_scale")):
         if design.get(key):
             parts.append(f"{label}：{design[key]}")
@@ -66,6 +73,8 @@ def design_text(shot: dict) -> str:
         parts.append("关键元素：" + "、".join(str(item) for item in elements))
     if design.get("final_state"):
         parts.append("终态：" + str(design["final_state"]))
+    if shot.get("static_reason"):
+        parts.append("保持理由：" + str(shot["static_reason"]))
     return "；".join(parts) or "待补充"
 
 

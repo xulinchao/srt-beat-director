@@ -8,6 +8,7 @@ import hashlib
 import json
 import sys
 from pathlib import Path
+from validate_design import validate as validate_design
 
 
 def parse_args() -> argparse.Namespace:
@@ -40,6 +41,9 @@ def validate(project_dir: Path) -> dict:
     statuses = project.get("status") or {}
     approvals = project.get("approvals") or {}
     review_mode = str(project.get("review_mode", "manual"))
+    design_report = validate_design(project_dir, "prepared" if statuses.get("visual_baseline") == "approved" else "planning", check_records=False)
+    errors.extend(design_report["errors"])
+    warnings.extend(design_report["warnings"])
 
     def validate_review_source(label: str, approval: dict) -> None:
         source = approval.get("review_source")

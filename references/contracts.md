@@ -108,10 +108,13 @@ python scripts/validate_references.py \
 
 ## 2. 真源规则
 
+新任务启用 `project.design_contract_version="1.0"`，新增 `config/DESIGN.md`。设计引用、继承、审批及逐镜互动字段的扩展契约见 [design-system.md](design-system.md)，模板见 [DESIGN.md](../templates/DESIGN.md)。旧任务显式迁移前保留兼容提醒，不自动改旧批准。visual-style 的 resolved_design 是派生参数快照，设计规则以 DESIGN 为准。
+
 - `config/project.json`：项目级输入、输出、规格、模式和门控状态的真源；
 - `planning/content-analysis.json`：全文结构和语义段的真源；
 - `planning/visual-plan.json`：镜头与时间轴的真源；
 - `config/visual-style.json` / `character-bible.json`：视觉一致性的真源；
+- 启用 DESIGN 后，visual-style 管设计引用、审阅和执行状态；character-bible 继续管身份，DESIGN 管视觉规则，不分别维护重复参数；
 - `input/references/index.json`：参考图片和素材允许影响范围的真源；
 - `templates/template-index.json`：模板来源和能力的真源；
 - `reports/timeline-audit.json`：计划节拍到主时间线实例的落实真源；
@@ -129,7 +132,7 @@ python scripts/validate_references.py \
   "project_id": "example",
   "inputs": {"srt": "input/source.srt", "audio": "input/narration.mp3"},
   "output": {"directory": "render", "filename": "final.mp4"},
-  "video": {"aspect_ratio": "9:16", "width": 1080, "height": 1920, "fps": 30},
+  "video": {"aspect_ratio": "16:9", "width": 1920, "height": 1080, "fps": 30},
   "primary_timeline": "chatcut",
   "review_mode": "manual",
   "chatcut": {"project_id": null, "project_name": null, "timeline_id": null},
@@ -209,6 +212,7 @@ python scripts/validate_references.py \
 ```json
 {
   "schema_version": "0.1",
+  "broll_structure_exceptions": [],
   "shots": [
     {
       "id": "S001",
@@ -224,6 +228,7 @@ python scripts/validate_references.py \
       "a_view": "protagonist",
       "semantic_structure": null,
       "semantic_pattern": null,
+      "visual_structure": null,
       "item_count": null,
       "visual_design": {
         "subject": "",
@@ -275,11 +280,15 @@ python scripts/validate_references.py \
 
 - A-roll 固定人物模式必须使用 `a_view`：`presenter`、`protagonist`、`supporting`、`first-person`；
 - 所有镜头的 `changes` 与 `narration_beats` 按顺序一一对应。每个 beat 的 `cue_ids` 必须属于当前镜头，`at_ms` 等于首个绑定 cue 的开始时间，`trigger_text` 逐字来自这些 cue；不得事后凭感觉填写任意时间点；
-- A-roll：4000ms 以下至少 1 个动作状态，4000ms 到 5999ms 至少 2 个，6000ms 及以上至少 3 个；呼吸、眨眼、背景循环、字幕出现和单纯推拉不计入；
+- A-roll 至少 1 个语义状态，数量不由时长决定。单状态镜头必须填写非空 shot.static_reason，说明静止为何足够；changes 与 narration_beats 仍保留对应的建立状态。装饰运动不计作叙事变化；
+- static_reason 是镜头级条件必填字符串，七列表格在画面设计中显示。旧单状态计划需根据实际语义补写、重生 Markdown 并复核受影响审批；不得仅为通过校验复制空泛理由，也不自动批改历史工作区。生产提示词更新后按 §8 重建实际需要重新执行的实例，不替换旧哈希冒充已执行；
 - B-roll 的有效阶段数服从已经批准的 `narration_beats`，每个阶段负责一次信息建立、关系改变、重点确认或结论落定；额外入场和尾部阅读保持不写成旁白节拍；
 - B-roll 必须填写 `material_type`、`presentation_type`、`semantic_structure` 与正整数 `item_count`；
 - `semantic_structure` 只允许 `comparison`、`aggregation`、`filtering`、`hierarchy`、`causality`、`replacement`、`expansion`；交叉特征写入可选的 `secondary_structures`；
 - `semantic_pattern` 可写具体骨架模式，例如 `before-after-slider` 或 `true-boundary-vs-temporary-fatigue`；它用于同一主结构内排序，不能代替标准主结构；
+- 每个 B-roll 必须填写具体 `visual_structure`，描述观众可见的空间关系、阅读路径和核心动作，例如 `document-assembly`、`question-radar` 或 `experience-bridge`；`cards`、`list`、`infographic`、`dark-ui` 等笼统外观词不能单独满足该字段；
+- 结构重复扫描按最近三个 B-roll 检查 visual_structure、模板与构图或语义模式与构图组合。匹配只产生 warning，不证明视觉疲劳；具体结构缺失或笼统名称仍是 error；
+- 复用时在 broll_structure_exceptions 填写 shot_id、compared_shot_id、semantic_reason、visible_difference。后者可说明新增内容、重点变化或布局不变的回顾用途，不强制结构差异。未完整记录的近邻重复保留 warning，由人工 QA 处理；跨窗口复用也记录。旧字段名保留兼容，不表示只有罕见例外才可复用；
 - B-roll 的 `materials` 必须能判断为现有已核实素材、待补素材或无需真实素材；
 - `template_id` 只能使用以下路由：合格本地模板 ID、`external-research:<structure>`、`external:<candidate-id>` 或 `new:<id>`。
 - `external-research:<structure>` 表示尚未完成研究，只能停留在规划状态，不能开始实现。
@@ -288,6 +297,8 @@ python scripts/validate_references.py \
 - `no-material + infographic` 没有合格本地模板时必须填写 `broll_research_record`，路径为 `planning/broll-research/<shot-id>.json`。详细契约见 [broll-external-research.md](broll-external-research.md)。
 
 ## 6. 模板索引
+
+新增验证模板应同时保存 `source_file`、短 preview、`element_relation`、`text_capacity`（中文每行字数/行数/最小字号）、`animation_phases`、`replaceable_fields`、许可证与实际渲染/seek 验证证据 `validation_evidence`。后者是项目相对文件路径，报告记录验证画幅、字体、渲染哈希及测试结果。目录存在或外部仓库登记不代表通过；改文案仍需容量与阅读验收。新条目写 `metadata_version="1.0"`，旧条目只保留兼容提醒，逐项补证后才升级。
 
 每个模板至少记录：
 
@@ -436,7 +447,7 @@ B-roll 使用同一外层结构，但把 `action_sequence` 替换为：
 - `prompt_source_sha256` 必须等于执行时 `references/production-prompts.md` 的 SHA-256；提示词真源改变后，旧实例自动过期；
 - `inputs` 保存实际代入的镜头文案、时间、导演意图、参考图、视觉规范或 B-roll 结构等输入，不能是空对象；
 - `resolved_prompt` 保存已经替换占位符、可实际执行的完整提示词，不能只写章节链接或摘要；
-- A-roll 的 `action_sequence.mode` 使用 `single-state`、`state-sequence` 或 `continuous-motion`。`single-state` 只允许用于 4000ms 以下的原子动作，并填写 `static_reason`；其他模式按镜头时长达到规定节拍数量；
+- A-roll 的 action_sequence.mode 使用 single-state、state-sequence 或 continuous-motion。single-state 只落实一个计划节拍，不限制时长；任何单状态实现均需继承 shot.static_reason 到 action_sequence.static_reason。多状态必须完整落实计划节拍，不得用静止理由删减；
 - B-roll 的 `motion_sequence.mode` 使用 `single-state`、`state-sequence`、`continuous-motion`、`verified-media-sequence` 或 `text-motion`；它的 beats 与计划 `narration_beats` 数量和顺序一致；
 - `action_sequence.beats` 与 `motion_sequence.beats` 的每项必须填写 `at_ms`、`trigger_text`、`visual_state` 和 `implementation`，且时间和短语与计划同序节拍完全一致。`produced` 阶段还必须填写 `evidence.artifact`；状态序列每个状态使用不同资产，连续动画或文字动效可以共用文件，但每个节拍使用不同的 `artifact_time_ms`；
 - `status` 使用 `prepared`、`used`、`completed` 或 `failed`。`prepared` 只证明提示词已实例化，不能证明已执行；`produced` 验证只接受 `completed`；

@@ -31,6 +31,8 @@ python scripts/validate_broll_research.py \
 
 ## 研究记录
 
+角色替换与新增互动的边界见 [broll-production.md](broll-production.md)：保持骨架可素材适配，改变骨架则记录候选不适用并走已有自建决策。assessment 补充主体/关系/变化、中文容量、内部节拍、设计兼容、依赖及具体预览检查；实际渲染通过前不能记为验证模板。
+
 ```json
 {
   "schema_version": "0.1",
