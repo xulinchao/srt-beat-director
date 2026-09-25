@@ -1,0 +1,349 @@
+{
+  "218": {
+    "inputs": {
+      "noise": [
+        "228",
+        0
+      ],
+      "guider": [
+        "219",
+        0
+      ],
+      "sampler": [
+        "231",
+        0
+      ],
+      "sigmas": [
+        "232",
+        0
+      ],
+      "latent_image": [
+        "245",
+        1
+      ]
+    },
+    "class_type": "SamplerCustomAdvanced",
+    "_meta": {
+      "title": "自定义采样器（高级）"
+    }
+  },
+  "219": {
+    "inputs": {
+      "model": [
+        "236",
+        0
+      ],
+      "conditioning": [
+        "245",
+        0
+      ]
+    },
+    "class_type": "BasicGuider",
+    "_meta": {
+      "title": "基本引导器"
+    }
+  },
+  "220": {
+    "inputs": {
+      "fps": 24,
+      "bit_depth": 8,
+      "color_space": "sRGB",
+      "codec": "none",
+      "images": [
+        "222",
+        0
+      ],
+      "audio": [
+        "223",
+        0
+      ]
+    },
+    "class_type": "CreateVideo",
+    "_meta": {
+      "title": "创建视频"
+    }
+  },
+  "221": {
+    "inputs": {
+      "filename_prefix": "video/MiniMax_H3",
+      "format": "mp4",
+      "format.codec": "h264",
+      "format.codec.encoding": "auto",
+      "codec": "auto",
+      "video": [
+        "220",
+        0
+      ]
+    },
+    "class_type": "SaveVideo",
+    "_meta": {
+      "title": "保存视频"
+    }
+  },
+  "222": {
+    "inputs": {
+      "samples": [
+        "218",
+        0
+      ],
+      "vae": [
+        "226",
+        0
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE解码"
+    }
+  },
+  "223": {
+    "inputs": {
+      "samples": [
+        "218",
+        0
+      ],
+      "vae": [
+        "235",
+        0
+      ]
+    },
+    "class_type": "VAEDecodeAudio",
+    "_meta": {
+      "title": "VAE解码（音频）"
+    }
+  },
+  "226": {
+    "inputs": {
+      "vae_name": "minimax_h3_video_vae_fp16.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "加载VAE"
+    }
+  },
+  "227": {
+    "inputs": {
+      "clip_name": "qwen3vl_32b_minimax_h3_int8_convrot.safetensors",
+      "type": "minimax",
+      "device": "default"
+    },
+    "class_type": "CLIPLoader",
+    "_meta": {
+      "title": "加载CLIP"
+    }
+  },
+  "228": {
+    "inputs": {
+      "noise_seed": 1070487209935329
+    },
+    "class_type": "RandomNoise",
+    "_meta": {
+      "title": "随机噪波"
+    }
+  },
+  "229": {
+    "inputs": {
+      "frame_rate": 24,
+      "loop_count": 0,
+      "filename_prefix": "AnimateDiff",
+      "format": "video/h264-mp4",
+      "pix_fmt": "yuv420p",
+      "crf": 19,
+      "save_metadata": true,
+      "trim_to_audio": false,
+      "pingpong": false,
+      "save_output": true,
+      "images": [
+        "222",
+        0
+      ],
+      "audio": [
+        "223",
+        0
+      ]
+    },
+    "class_type": "VHS_VideoCombine",
+    "_meta": {
+      "title": "Video Combine 🎥🅥🅗🅢"
+    }
+  },
+  "231": {
+    "inputs": {
+      "sampler_name": "res_multistep"
+    },
+    "class_type": "KSamplerSelect",
+    "_meta": {
+      "title": "K采样器选择"
+    }
+  },
+  "232": {
+    "inputs": {
+      "scheduler": "simple",
+      "steps": 20,
+      "denoise": 1,
+      "model": [
+        "236",
+        0
+      ]
+    },
+    "class_type": "BasicScheduler",
+    "_meta": {
+      "title": "基本调度器"
+    }
+  },
+  "233": {
+    "inputs": {
+      "value": 15
+    },
+    "class_type": "PrimitiveFloat",
+    "_meta": {
+      "title": "Float (Duration)"
+    }
+  },
+  "234": {
+    "inputs": {
+      "image": "pasted/f2716bf265218a036fda37492c371eebbec2977a458012cb16830d8ba26e1591.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "加载图像"
+    }
+  },
+  "235": {
+    "inputs": {
+      "vae_name": "minimax_h3_audio_vae_fp32.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "加载VAE"
+    }
+  },
+  "236": {
+    "inputs": {
+      "reuse_threshold": 0.2,
+      "start_percent": 0.15,
+      "end_percent": 0.95,
+      "verbose": false,
+      "model": [
+        "237",
+        0
+      ]
+    },
+    "class_type": "EasyCache",
+    "_meta": {
+      "title": "EasyCache"
+    }
+  },
+  "237": {
+    "inputs": {
+      "sage_attention": "auto",
+      "allow_compile": false,
+      "model": [
+        "238",
+        0
+      ]
+    },
+    "class_type": "PathchSageAttentionKJ",
+    "_meta": {
+      "title": "Patch Sage Attention KJ"
+    }
+  },
+  "238": {
+    "inputs": {
+      "unet_name": "minimax_h3_ref2va_int8_convrot.safetensors",
+      "weight_dtype": "default"
+    },
+    "class_type": "UNETLoader",
+    "_meta": {
+      "title": "UNet加载器"
+    }
+  },
+  "239": {
+    "inputs": {
+      "image": "pasted/ebc8932da55ba4138df31843e27f64ae5f56167e44aa3913c10900105b504b24.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "加载图像"
+    }
+  },
+  "240": {
+    "inputs": {
+      "aspect_ratio": "16:9 (Widescreen)",
+      "megapixels": 1,
+      "multiple": 32
+    },
+    "class_type": "ResolutionSelector",
+    "_meta": {
+      "title": "Resolution Selector (Size)"
+    }
+  },
+  "241": {
+    "inputs": {
+      "expression": "max(5, round(a * 24)) + (5 - (max(5, round(a * 24)) % 17)) % 17",
+      "values.a": [
+        "233",
+        0
+      ]
+    },
+    "class_type": "ComfyMathExpression",
+    "_meta": {
+      "title": "数学表达式"
+    }
+  },
+  "242": {
+    "inputs": {
+      "image": "pasted/0e88d6c4c2e88f9f59f4d3d0510a41b418455d7cce91e8380ccfd72bb1a830b3.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "加载图像"
+    }
+  },
+  "245": {
+    "inputs": {
+      "prompt": "subject_definitions:\n<Subject 1> 是参考图 1 中的成年女性：黑色长发盘成松散发髻，头顶戴黑色墨镜，佩戴细项链和小耳环；身穿米白色细条纹宽松衬衫、白色短裤、棕色腰带和棕色平底鞋，肩背棕色皮质单肩包。\n<Subject 2> 是参考图 2 中的成年男性：浅金色短发，佩戴小耳环和银色项链；身穿米白色连帽轻薄外套、同色长裤和白色运动鞋。\n<Subject 3> 是参考图 3 中的现代韩国商业街：阳光明亮的午后街道，左侧商场入口与玻璃门，韩文招牌，沿街树木，自行车，高层住宅和商铺。\n\nsummary:\n[reference generation] 制作一段连贯、写实、温柔伤感的 15 秒都市剧情短片。<Subject 1> 与 <Subject 2> 从 <Subject 3> 的商场大门走出，沿街缓慢行走并用韩语交谈；随后两人停下拥抱，<Subject 1> 强忍悲伤，眼眶含泪但泪水尚未落下。全程保持角色面部、服装、发型和街道环境稳定一致。\n\nretention_analysis:\n<Subject 1>（出现在全部镜头）：fully_preserved - 保持黑色盘发、头顶墨镜、条纹衬衫、白色短裤、棕色单肩包及成年女性身份。\n<Subject 2>（出现在全部镜头）：fully_preserved - 保持浅金色短发、耳环、银色项链、米白色连帽外套、同色长裤及成年男性身份。\n<Subject 3>（出现在全部镜头）：fully_preserved - 保持阳光街道、商场玻璃门、韩文招牌、行道树、自行车和两侧建筑的空间关系。\n\ndetailed_description:\n整体采用高品质韩剧电影感，温暖午后自然阳光，轻微胶片质感，真实细腻的人物表情与口型同步；情绪克制、真诚，无字幕，无额外文字。\n\n[Shot 1] 镜头从 <Subject 3> 左侧商场的玻璃大门开始，中广角平视跟拍。<Subject 1> 从门内先走出，棕色单肩包自然垂在肩侧；<Subject 2> 随后走到她身旁。两人并肩走上阳光照亮的人行道，身后玻璃门缓缓合上。镜头平稳后退，保持两人完整上半身与商场入口同框。\n\n[Shot 2] At 00:04.500，切至侧面中景跟拍。<Subject 1> 与 <Subject 2> 沿着街道缓慢前行，树影在地面移动，远处自行车和商铺保持虚化。<Subject 2> (S1) 偏过头，语气温和又有些不舍地问：<d>[Korean] 오늘 즐거웠어?</d> <Subject 1> 轻轻点头，低头看向前方，手指无意识地捏住包带。\n\n[Shot 3] At 00:08.500，切至从前方缓慢向后移动的近景。两人脚步逐渐放慢，在安静的人行道边停下。<Subject 1> (S2) 看着 <Subject 2>，勉强露出一点笑意，声音轻而发颤地回答：<d>[Korean] 응… 그런데 헤어지기 싫어.</d> 她说完后垂下眼睛，<Subject 2> 沉默一瞬，神情变得心疼而坚定。\n\n[Shot 4] At 00:11.500，切至温柔的中近景。<Subject 2> (S1) 轻声说：<d>[Korean] 나도 그래. 괜찮아.</d> 随后他向前一步，伸手将 <Subject 1> 轻轻拥入怀中。<Subject 1> 将脸靠在他的肩上，双手缓慢抱住他的后背；镜头以极慢速度环绕两人，午后阳光在她的发丝和肩膀上形成柔和轮廓光。\n\n[Shot 5] At 00:13.500，切至 <Subject 1> 靠在 <Subject 2> 肩头的脸部特写。她努力忍住哭泣，眼眶逐渐湿润，一滴泪在下眼睑边缘聚集、微微颤动但尚未滑落。她闭眼深吸一口气，<Subject 2> 安静地抱紧她。背景中的阳光街道化为温暖柔焦，画面在克制而悲伤的拥抱中结束。\n\noverall_soundscape:\n午后城市的轻微车流声、远处行人声、自行车经过声、树叶被微风吹动的沙沙声、商场玻璃门开合声、两人自然脚步声、衣物摩擦声，以及近距离、清晰但轻柔的韩语对白。\n\nnon_diegetic_music:\n温柔克制的韩剧钢琴配乐，开头以稀疏的钢琴单音与轻柔弦乐铺陈；对话时保持低音量；拥抱时加入温暖但略带忧伤的长音弦乐，结尾停留在一个未完全解决的柔和钢琴和弦上。",
+      "width": [
+        "240",
+        0
+      ],
+      "height": [
+        "240",
+        1
+      ],
+      "length": [
+        "241",
+        1
+      ],
+      "ref_image_size": "match",
+      "clip": [
+        "227",
+        0
+      ],
+      "vae": [
+        "226",
+        0
+      ],
+      "audio_vae": [
+        "235",
+        0
+      ],
+      "ref_images.ref_image_0": [
+        "242",
+        0
+      ],
+      "ref_images.ref_image_1": [
+        "234",
+        0
+      ],
+      "ref_images.ref_image_2": [
+        "239",
+        0
+      ]
+    },
+    "class_type": "MiniMaxH3ReferenceToVideo",
+    "_meta": {
+      "title": "MiniMax H3 参考转视频"
+    }
+  }
+}

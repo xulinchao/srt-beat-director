@@ -108,7 +108,7 @@ def main() -> int:
         "approvals": {
             "plan": {"sha256": None, "approved_at": None, "review_source": None},
             "visual_baseline": {"sha256": None, "approved_at": None, "review_source": None},
-            "sample": {"sha256": None, "approved_at": None, "review_source": None, "artifact": None},
+            "sample": {"sha256": None, "approved_at": None, "review_source": None, "artifact": None, "dependencies": None},
             "final": {"sha256": None, "approved_at": None, "review_source": None},
         },
         "final_artifact": None,
@@ -118,6 +118,9 @@ def main() -> int:
     )
     skill_templates = Path(__file__).resolve().parents[1] / "templates"
     shutil.copy2(skill_templates / "template-index.json", templates_dir / "template-index.json")
+    # Certified templates keep their complete, portable bundle under templates/library/.
+    if (skill_templates / "library").is_dir():
+        shutil.copytree(skill_templates / "library", templates_dir / "library")
     print(json.dumps({"status": "created", "project_dir": str(args.project_dir)}, ensure_ascii=False))
     return 0
 

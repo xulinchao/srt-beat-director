@@ -326,13 +326,18 @@ def main() -> int:
             "verified-media",
             "diagram",
             "text-only",
+            "scene",
         }:
             errors.append(f"{shot.get('id')} 的 B 子类型无效")
         if role == "B":
             if shot.get("material_type") not in {"verified-media", "no-material", "text-only"}:
                 errors.append(f"{shot.get('id')} 缺少有效 material_type")
-            if shot.get("presentation_type") not in {"verified-media", "infographic", "text-motion"}:
+            if shot.get("presentation_type") not in {"verified-media", "infographic", "text-motion", "scene"}:
                 errors.append(f"{shot.get('id')} 缺少有效 presentation_type")
+            if shot.get("presentation_type") == "scene" and (
+                shot.get("material_type") != "no-material" or shot.get("screen_subtype") != "scene"
+            ):
+                errors.append(f"{shot.get('id')} 生成场景必须使用 no-material + scene，不能标为真实证据")
             semantic_structure = shot.get("semantic_structure")
             if semantic_structure not in CANONICAL_SEMANTIC_STRUCTURES:
                 errors.append(f"{shot.get('id')} semantic_structure 必须使用七类标准结构")
@@ -400,9 +405,17 @@ def main() -> int:
             role == "B"
             and shot.get("material_type") == "no-material"
             and shot.get("presentation_type") == "infographic"
-            and production.get("primary_tool") not in {"hyperframes", "remotion"}
+            and production.get("primary_tool") not in {
+                "hyperframes",
+                "remotion",
+                "chatcut-motion-graphics",
+                "comfyui-minimax-h3-fl2v",
+                "comfyui-minimax-h3-i2v",
+                "comfyui-minimax-h3-r2v",
+                "comfyui-minimax-h3-multi-reference",
+            }
         ):
-            errors.append(f"{shot.get('id')} 的无素材信息动画必须选择 hyperframes 或 remotion")
+            errors.append(f"{shot.get('id')} 的无素材信息动画必须选择可用的逐镜动效工具")
         errors.extend(validate_runtime_decision(shot, args.project.parent.parent, template_index))
         fallback_tools = production.get("fallback_tools")
         if not isinstance(fallback_tools, list):

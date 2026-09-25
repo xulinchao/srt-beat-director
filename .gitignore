@@ -4,8 +4,7 @@
 /videos/
 /planning/
 
-# Development-only fixtures and source research
-/tests/
+# Local source research (regression tests are versioned)
 /research/
 /docs/
 

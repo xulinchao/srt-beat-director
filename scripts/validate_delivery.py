@@ -8,9 +8,12 @@ import hashlib
 import json
 import math
 import sys
+import subprocess
 from pathlib import Path
 
 import validate_prompt_usage
+import validate_state
+from media_evidence import probe_video, validate_scan
 
 
 def parse_args() -> argparse.Namespace:
@@ -95,11 +98,10 @@ def validate(project_dir: Path, prompts_path: Path, mode: str) -> dict:
     project_artifact = final_artifact_from(project, "config/project.json", errors)
     qa_artifact = final_artifact_from(qa, "reports/qa-report.json", errors)
     manifest_artifact = final_artifact_from(manifest, "reports/manifest.json", errors)
-    artifact_keys = ("path", "sha256", "bytes", "duration_ms", "timeline_id")
+    artifact_keys = set(project_artifact) | set(qa_artifact) | set(manifest_artifact)
     for key in artifact_keys:
-        values = {str(value.get(key)) for value in (project_artifact, qa_artifact, manifest_artifact)}
-        if len(values) > 1:
-            errors.append(f"final_artifact.{key} 在 project、QA 与 manifest 中不一致：{sorted(values)}")
+        if any(value.get(key) != project_artifact.get(key) for value in (qa_artifact, manifest_artifact)):
+            errors.append(f"final_artifact.{key} 在 project、QA 与 manifest 中不一致")
 
     final_path = project_path(project_dir, manifest_artifact.get("path"))
     if not final_path.is_file():
@@ -116,15 +118,51 @@ def validate(project_dir: Path, prompts_path: Path, mode: str) -> dict:
         if str(manifest_artifact.get("sha256") or "").lower() != actual_hash:
             errors.append("final_artifact.sha256 与最终 MP4 不一致")
 
+    state_report = validate_state.validate(project_dir)
+    errors.extend(f"状态依赖：{value}" for value in state_report["errors"])
+    warnings.extend(state_report["warnings"])
+    for gate in ("plan", "visual_baseline", "sample"):
+        if (project.get("status") or {}).get(gate) != "approved":
+            errors.append(f"交付前 {gate} 必须批准且依赖有效")
+
     duration_ms = manifest_artifact.get("duration_ms")
     audio_duration_ms = (preflight.get("audio") or {}).get("duration_ms")
-    fps = int((project.get("video") or {}).get("fps") or 30)
-    tolerance_ms = max(math.ceil(1000 / fps), 50)
-    if isinstance(duration_ms, int) and isinstance(audio_duration_ms, int):
+    fps = (project.get("video") or {}).get("fps")
+    if type(fps) not in (int, float) or not math.isfinite(fps) or fps <= 0:
+        errors.append("project.video.fps 必须为正数")
+        fps = 30
+    frame_tolerance_ms = 1000 / fps
+    tolerance_ms = max(frame_tolerance_ms, 50)
+    if type(duration_ms) in (int, float) and type(audio_duration_ms) in (int, float) and all(math.isfinite(v) and v > 0 for v in (duration_ms, audio_duration_ms)):
         if abs(duration_ms - audio_duration_ms) > tolerance_ms:
             errors.append(
                 f"成片与音频时长误差超过 {tolerance_ms}ms：{duration_ms} / {audio_duration_ms}"
             )
+    else:
+        errors.append("成片与预检音频 duration_ms 必须为正数")
+
+    media = None
+    if final_path.is_file():
+        try:
+            media = probe_video(final_path)
+            for key in ("width", "height", "fps"):
+                expected = (project.get("video") or {}).get(key)
+                if type(expected) not in (int, float) or not math.isfinite(expected) or abs(media[key] - expected) > 0.001:
+                    errors.append(f"实际视频 {key} 与项目规格不一致")
+            for label, expected in (("登记时长", duration_ms), ("旁白时长", audio_duration_ms)):
+                if type(expected) in (int, float) and abs(media["duration_ms"] - expected) > tolerance_ms:
+                    errors.append(f"实际视频流时长与{label}不一致")
+            if abs(media["decoded_frames"] * 1000 / fps - media["duration_ms"]) > frame_tolerance_ms:
+                errors.append("实际解码帧数与项目帧率/视频时长不一致")
+            if abs(media["start_ms"]) > frame_tolerance_ms:
+                errors.append("视频流未从时间线零点开始")
+            if not media["audio_streams"] or not media["audio_durations_ms"]:
+                errors.append("成片缺少可验证时长的音频流")
+            elif type(audio_duration_ms) in (int, float) and all(abs(v - audio_duration_ms) > tolerance_ms for v in media["audio_durations_ms"]):
+                errors.append("实际音频流时长与旁白时长不一致")
+            errors.extend(validate_scan(project_dir, qa.get("frame_scan"), final_path, media))
+        except (OSError, ValueError, subprocess.SubprocessError) as exc:
+            errors.append(f"实际媒体验证失败：{exc}")
 
     if qa.get("status") != "pass":
         errors.append(f"QA 未通过：status={qa.get('status')}")
@@ -146,8 +184,11 @@ def validate(project_dir: Path, prompts_path: Path, mode: str) -> dict:
             if str(value or "") != expected_timeline_id:
                 errors.append(f"{label} 与 final_artifact.timeline_id 不一致")
 
+    shots = plan.get("shots") or []
     audit_shots = {str(item.get("id")): item for item in audit.get("shots") or []}
-    for shot in plan.get("shots") or []:
+    if len(audit_shots) != len(audit.get("shots") or []) or set(audit_shots) != {str(s.get("id")) for s in shots}:
+        errors.append("时间线审计镜头 ID 重复或与计划集合不一致")
+    for shot_index, shot in enumerate(shots):
         shot_id = str(shot.get("id") or "")
         audited = audit_shots.get(shot_id)
         if not audited:
@@ -159,6 +200,17 @@ def validate(project_dir: Path, prompts_path: Path, mode: str) -> dict:
             errors.append(f"{shot_id} 时间线审计的 screen_role 与计划不一致")
         if audited.get("plan_range_ms") != [shot.get("start_ms"), shot.get("end_ms")]:
             errors.append(f"{shot_id} 时间线审计的 plan_range_ms 与计划不一致")
+
+        # Display ranges are half-open and include the explicit gap-hold policy.
+        def frame_at(ms: float) -> int:
+            return math.floor(ms * fps / 1000 + 0.5)
+
+        expected_start = 0 if shot_index == 0 else frame_at(shot["start_ms"])
+        expected_end = (frame_at(shots[shot_index + 1]["start_ms"]) if shot_index + 1 < len(shots)
+                        else media["decoded_frames"] if media else frame_at(audio_duration_ms or shot["end_ms"]))
+        expected_range = [expected_start, expected_end]
+        if audited.get("timeline_range_frames") != expected_range or expected_end <= expected_start:
+            errors.append(f"{shot_id} timeline_range_frames 应为 {expected_range}（含空隙保持）")
 
         planned_beats = shot.get("narration_beats") or []
         audited_beats = audited.get("beats") or []
@@ -183,7 +235,7 @@ def validate(project_dir: Path, prompts_path: Path, mode: str) -> dict:
             if actual.get("status") != "covered":
                 errors.append(f"{beat_label} 未标记为 covered")
             timeline_at_ms = actual.get("timeline_at_ms")
-            if not isinstance(timeline_at_ms, int) or abs(timeline_at_ms - int(planned.get("at_ms", 0))) > tolerance_ms:
+            if type(timeline_at_ms) is not int or abs(timeline_at_ms - int(planned.get("at_ms", 0))) > frame_tolerance_ms:
                 errors.append(f"{beat_label} 未在一个时间线帧内绑定旁白节拍")
             evidence = actual.get("evidence") or {}
             timeline_items = evidence.get("timeline_items") or []
@@ -194,6 +246,12 @@ def validate(project_dir: Path, prompts_path: Path, mode: str) -> dict:
                     errors.append(f"{beat_label} timeline item 缺少 item_id")
                 if project.get("primary_timeline") == "chatcut" and not str(item.get("asset_id") or "").strip():
                     errors.append(f"{beat_label} ChatCut timeline item 缺少 asset_id")
+                bounds = item.get("range_frames")
+                valid = isinstance(bounds, list) and len(bounds) == 2 and all(type(v) is int for v in bounds)
+                if not valid or not expected_start <= bounds[0] < bounds[1] <= expected_end:
+                    errors.append(f"{beat_label} timeline item 帧范围无效或越过镜头范围")
+                elif type(timeline_at_ms) is int and not bounds[0] <= frame_at(timeline_at_ms) < bounds[1]:
+                    errors.append(f"{beat_label} timeline item 未覆盖实际节拍帧")
             if position <= len(produced_beats):
                 produced_evidence = produced_beats[position - 1].get("evidence") or {}
                 if evidence.get("artifact") != produced_evidence.get("artifact"):

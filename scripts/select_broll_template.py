@@ -9,6 +9,7 @@ import sys
 from pathlib import Path
 
 from broll_runtime import RUNTIMES, template_runtime, template_status
+from validate_template_index import validate as validate_index
 
 
 def parse_args() -> argparse.Namespace:
@@ -233,6 +234,10 @@ def main() -> int:
         print("item-count 和 duration-ms 必须为正整数", file=sys.stderr)
         return 2
     try:
+        validation = validate_index(args.index)
+        if validation["status"] != "pass":
+            print(json.dumps(validation, ensure_ascii=False), file=sys.stderr)
+            return 2
         index = load(args.index)
         external = load(args.external_sources) if args.external_sources else None
         semantic_mapping = load(args.semantic_map) if args.semantic_map else None

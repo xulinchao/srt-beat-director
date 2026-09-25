@@ -9,6 +9,7 @@ import json
 import sys
 from pathlib import Path
 from validate_design import validate as validate_design
+from sample_dependencies import validate_snapshot
 
 
 def parse_args() -> argparse.Namespace:
@@ -85,6 +86,8 @@ def validate(project_dir: Path) -> dict:
     sample_approval = approvals.get("sample") or {}
     sample_artifact = sample_approval.get("artifact")
     if sample_status == "approved":
+        if plan_status != "approved":
+            errors.append("样片已批准，但当前计划未批准")
         if baseline_status != "approved":
             errors.append("样片已批准，但当前视觉基线未批准")
         if not sample_approval.get("sha256") or not sample_artifact:
@@ -94,6 +97,7 @@ def validate(project_dir: Path) -> dict:
         elif sha256(project_dir / sample_artifact) != sample_approval.get("sha256"):
             errors.append("样片批准 SHA-256 与文件不一致")
         validate_review_source("样片", sample_approval)
+        errors.extend(validate_snapshot(project_dir, sample_approval))
 
     final_status = str(statuses.get("final", ""))
     final_approval = approvals.get("final") or {}

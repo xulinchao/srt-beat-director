@@ -1,0 +1,467 @@
+{
+  "92": {
+    "inputs": {
+      "filename_prefix": "srt-beat-director/s001_h3_latent2x_1080p",
+      "format": "mp4",
+      "format.codec": "h264",
+      "codec": "h264",
+      "video": [
+        "105:91",
+        0
+      ]
+    },
+    "class_type": "SaveVideo",
+    "_meta": {
+      "title": "保存视频"
+    }
+  },
+  "114": {
+    "inputs": {
+      "image": "first_frame.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "加载图像"
+    }
+  },
+  "115": {
+    "inputs": {
+      "aspect_ratio": "16:9 (Widescreen)",
+      "megapixels": 0.4,
+      "multiple": 32
+    },
+    "class_type": "ResolutionSelector",
+    "_meta": {
+      "title": "分辨率选择器"
+    }
+  },
+  "105:11": {
+    "inputs": {
+      "vae_name": "minimax_h3_video_vae_fp16.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "加载VAE"
+    }
+  },
+  "105:17": {
+    "inputs": {
+      "sampler_name": "res_multistep"
+    },
+    "class_type": "KSamplerSelect",
+    "_meta": {
+      "title": "K采样器选择"
+    }
+  },
+  "105:9": {
+    "inputs": {
+      "scheduler": "simple",
+      "steps": [
+        "105:123",
+        0
+      ],
+      "denoise": 1,
+      "model": [
+        "105:122",
+        0
+      ]
+    },
+    "class_type": "BasicScheduler",
+    "_meta": {
+      "title": "基本调度器"
+    }
+  },
+  "105:14": {
+    "inputs": {
+      "noise": [
+        "105:15",
+        0
+      ],
+      "guider": [
+        "105:16",
+        0
+      ],
+      "sampler": [
+        "105:17",
+        0
+      ],
+      "sigmas": [
+        "105:9",
+        0
+      ],
+      "latent_image": [
+        "105:104",
+        1
+      ]
+    },
+    "class_type": "SamplerCustomAdvanced",
+    "_meta": {
+      "title": "自定义采样器（高级）"
+    }
+  },
+  "105:16": {
+    "inputs": {
+      "model": [
+        "900",
+        0
+      ],
+      "conditioning": [
+        "105:104",
+        0
+      ]
+    },
+    "class_type": "BasicGuider",
+    "_meta": {
+      "title": "基本引导器"
+    }
+  },
+  "105:6": {
+    "inputs": {
+      "unet_name": "minimax_h3_fl2va_pruned_int8_convrot.safetensors",
+      "weight_dtype": "default"
+    },
+    "class_type": "UNETLoader",
+    "_meta": {
+      "title": "UNet加载器"
+    }
+  },
+  "105:13": {
+    "inputs": {
+      "clip_name": "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
+      "type": "minimax",
+      "device": "default"
+    },
+    "class_type": "CLIPLoader",
+    "_meta": {
+      "title": "加载CLIP"
+    }
+  },
+  "105:15": {
+    "inputs": {
+      "noise_seed": 757358688076805
+    },
+    "class_type": "RandomNoise",
+    "_meta": {
+      "title": "随机噪波"
+    }
+  },
+  "105:91": {
+    "inputs": {
+      "fps": 24,
+      "bit_depth": 8,
+      "color_space": "sRGB",
+      "images": [
+        "210",
+        0
+      ],
+      "codec": "h264"
+    },
+    "class_type": "CreateVideo",
+    "_meta": {
+      "title": "创建视频"
+    }
+  },
+  "105:104": {
+    "inputs": {
+      "prompt": "同一机位和构图，主体从首帧自然运动到尾帧，动作连续、节奏平稳，保持人物身份、背景和光线一致。",
+      "width": 1344,
+      "height": 768,
+      "length": 124,
+      "clip": [
+        "105:13",
+        0
+      ],
+      "vae": [
+        "105:11",
+        0
+      ],
+      "first_frame": [
+        "114",
+        0
+      ],
+      "last_frame": [
+        "116",
+        0
+      ]
+    },
+    "class_type": "MiniMaxH3ImageToVideo",
+    "_meta": {
+      "title": "MiniMax H3 Image to Video"
+    }
+  },
+  "105:121": {
+    "inputs": {
+      "lora_name": "minimax_h3_fl2v_turbo_8step_v1.0_comfyui_bf16.safetensors",
+      "strength_model": 1,
+      "model": [
+        "105:6",
+        0
+      ]
+    },
+    "class_type": "LoraLoaderModelOnly",
+    "_meta": {
+      "title": "LoRA加载器（仅模型）"
+    }
+  },
+  "105:122": {
+    "inputs": {
+      "switch": [
+        "105:126",
+        0
+      ],
+      "on_false": [
+        "105:6",
+        0
+      ],
+      "on_true": [
+        "105:121",
+        0
+      ]
+    },
+    "class_type": "ComfySwitchNode",
+    "_meta": {
+      "title": "If/Else Switch (Model)"
+    }
+  },
+  "105:123": {
+    "inputs": {
+      "switch": [
+        "105:126",
+        0
+      ],
+      "on_false": [
+        "105:124",
+        0
+      ],
+      "on_true": [
+        "105:125",
+        0
+      ]
+    },
+    "class_type": "ComfySwitchNode",
+    "_meta": {
+      "title": "If/Else Switch (Steps)"
+    }
+  },
+  "105:124": {
+    "inputs": {
+      "value": 20
+    },
+    "class_type": "PrimitiveInt",
+    "_meta": {
+      "title": "整数"
+    }
+  },
+  "105:125": {
+    "inputs": {
+      "value": 8
+    },
+    "class_type": "PrimitiveInt",
+    "_meta": {
+      "title": "整数"
+    }
+  },
+  "105:126": {
+    "inputs": {
+      "value": true
+    },
+    "class_type": "PrimitiveBoolean",
+    "_meta": {
+      "title": "Boolean (Enable Lightning LoRA)"
+    }
+  },
+  "116": {
+    "inputs": {
+      "image": "last_frame.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "尾帧"
+    }
+  },
+  "900": {
+    "inputs": {
+      "model": [
+        "105:122",
+        0
+      ],
+      "sage_attention": "auto",
+      "allow_compile": false
+    },
+    "class_type": "PathchSageAttentionKJ",
+    "_meta": {
+      "title": "Patch H3 attention (SageAttention auto)"
+    }
+  },
+  "201": {
+    "inputs": {
+      "noise_seed": 757358688076806
+    },
+    "class_type": "RandomNoise",
+    "_meta": {
+      "title": "Pass 2 noise"
+    }
+  },
+  "202": {
+    "inputs": {
+      "model": [
+        "900",
+        0
+      ],
+      "steps": 4,
+      "denoise": 0.45,
+      "rho": 7.0,
+      "shape": "karras",
+      "reference_steps": 8,
+      "base_scheduler": "normal"
+    },
+    "class_type": "MiniMaxH3Pass2StaggeredScheduler",
+    "_meta": {
+      "title": "Pass 2 short staggered sigma schedule (experimental)"
+    }
+  },
+  "203": {
+    "inputs": {
+      "samples": [
+        "105:14",
+        1
+      ],
+      "method": "learned model",
+      "learned_model": "h3_clean_latent_upscaler_film_epoch200.safetensors",
+      "model": [
+        "900",
+        0
+      ],
+      "noise": [
+        "201",
+        0
+      ],
+      "sigmas": [
+        "202",
+        0
+      ],
+      "audio_denoise": 0.0,
+      "noise_resample": "independent",
+      "positive": [
+        "105:104",
+        0
+      ]
+    },
+    "class_type": "MiniMaxH3LatentUpscaleCombined",
+    "_meta": {
+      "title": "Learned H3 latent upscale 2x + CONST noise"
+    }
+  },
+  "204": {
+    "inputs": {
+      "model": [
+        "900",
+        0
+      ],
+      "conditioning": [
+        "203",
+        1
+      ]
+    },
+    "class_type": "BasicGuider",
+    "_meta": {
+      "title": "Rebuild guider from scaled H3 conditioning"
+    }
+  },
+  "205": {
+    "inputs": {
+      "sampler_name": "res_multistep"
+    },
+    "class_type": "KSamplerSelect",
+    "_meta": {
+      "title": "Pass 2 sampler (non-ancestral)"
+    }
+  },
+  "206": {
+    "inputs": {},
+    "class_type": "DisableNoise",
+    "_meta": {
+      "title": "Use noise already injected at sigma start"
+    }
+  },
+  "207": {
+    "inputs": {
+      "noise": [
+        "206",
+        0
+      ],
+      "guider": [
+        "204",
+        0
+      ],
+      "sampler": [
+        "205",
+        0
+      ],
+      "sigmas": [
+        "202",
+        0
+      ],
+      "latent_image": [
+        "203",
+        0
+      ]
+    },
+    "class_type": "SamplerCustomAdvanced",
+    "_meta": {
+      "title": "H3 high-resolution refinement pass"
+    }
+  },
+  "208": {
+    "inputs": {
+      "samples": [
+        "207",
+        0
+      ],
+      "vae": [
+        "105:11",
+        0
+      ],
+      "tiling": true,
+      "tile_size": 512,
+      "tile_overlap": 128,
+      "output_device": "cpu"
+    },
+    "class_type": "MiniMaxH3VAEDecodeFast",
+    "_meta": {
+      "title": "H3 VAE tiled decode (CPU frame output)"
+    }
+  },
+  "209": {
+    "inputs": {
+      "image": [
+        "208",
+        0
+      ],
+      "width": 2688,
+      "height": 1512,
+      "x": 0,
+      "y": 12
+    },
+    "class_type": "ImageCrop",
+    "_meta": {
+      "title": "Crop tiny aspect-grid difference to 16:9"
+    }
+  },
+  "210": {
+    "inputs": {
+      "image": [
+        "209",
+        0
+      ],
+      "upscale_method": "lanczos",
+      "width": 1920,
+      "height": 1080,
+      "crop": "disabled"
+    },
+    "class_type": "ImageScale",
+    "_meta": {
+      "title": "Downsample supersampled frames to exact 1920x1080"
+    }
+  }
+}

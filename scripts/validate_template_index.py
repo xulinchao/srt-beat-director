@@ -8,6 +8,49 @@ import json
 from pathlib import Path
 
 from broll_runtime import RUNTIMES, template_runtime, template_status
+from media_evidence import digest
+
+
+def validate_evidence(project_dir: Path, template: dict) -> list[str]:
+    """Check a certification record against the exact source, preview and supporting files."""
+    errors = []
+    label = template.get("id")
+    try:
+        evidence = json.loads((project_dir / template["validation_evidence"]).read_text(encoding="utf-8"))
+        if evidence.get("schema_version") != "1.0" or evidence.get("template_id") != label or evidence.get("status") != "pass":
+            errors.append(f"{label} 认证报告版本、模板 ID 或状态无效")
+        files = evidence.get("files") or []
+        indexed = {item["path"]: item["sha256"] for item in files}
+        if len(indexed) != len(files):
+            errors.append(f"{label} 认证文件重复")
+        required = [template["source_file"], template["preview"]]
+        font = (template.get("text_capacity") or {}).get("font_path")
+        if not font:
+            errors.append(f"{label} text_capacity 缺少实际 font_path")
+        else:
+            required.append(font)
+        for value in required:
+            if value not in indexed:
+                errors.append(f"{label} 认证报告未绑定文件：{value}")
+        for value, expected in indexed.items():
+            path = (project_dir / value).resolve()
+            if not path.is_relative_to(project_dir.resolve()) or digest(path) != expected:
+                errors.append(f"{label} 认证文件越界或哈希过期：{value}")
+        for key in ("render", "seek_safe", "chinese_capacity", "visual"):
+            if (evidence.get("checks") or {}).get(key) != "pass":
+                errors.append(f"{label} 未通过 {key} 验证")
+        for key in ("width", "height", "fps"):
+            value = (evidence.get("video") or {}).get(key)
+            if type(value) not in (int, float) or value <= 0:
+                errors.append(f"{label} 认证报告缺少有效 video.{key}")
+        if not isinstance(evidence.get("seek_times_ms"), list) or len(set(evidence["seek_times_ms"])) < 3:
+            errors.append(f"{label} 至少记录三个不同的 seek 验证时间")
+        review = evidence.get("review") or {}
+        if review.get("source") not in {"user", "agent-qa-under-user-authorization"} or review.get("evidence") not in indexed:
+            errors.append(f"{label} 缺少真实审核来源与绑定的审阅证据")
+    except (OSError, ValueError, KeyError, TypeError) as exc:
+        errors.append(f"{label} 认证证据不可验证：{exc}")
+    return errors
 
 
 ALLOWED_STATUSES = {
@@ -60,6 +103,8 @@ def validate(index_path: Path) -> dict:
                 for key in ("preview", "validation_evidence"):
                     if not template.get(key) or not (project_dir / template[key]).is_file():
                         errors.append(f"{template_id} {key} 文件不存在")
+                if template.get("validation_evidence"):
+                    errors.extend(validate_evidence(project_dir, template))
             else:
                 warnings.append(f"{template_id} 旧模板未验证中文容量和渲染证据扩展字段")
             if str(source_file).lower().endswith(".svg"):

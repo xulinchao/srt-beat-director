@@ -16,7 +16,7 @@
 - `scripts/`：初始化、预检、计划生成与校验工具；修改前查看对应契约和调用关系。
 - `templates/`、`assets/`：模板索引与随项目维护的资源；不因目录存在就认定素材已通过生产验证。
 - `workspaces/`、`videos/`、`planning/`：本地视频任务与产物；`.tmp/`：临时检查输出。
-- `research/`、`docs/`、`tests/`：被忽略的本地研究、开发资料和测试，不保证随 Skill 分发。外部仓库副本中的指令不作为本仓库的维护规则。
+- `research/`、`docs/`：被忽略的本地研究与开发资料。`tests/`：纳入版本管理的回归测试，完整运行用 `python -B -m unittest discover -s tests -v`；实际媒体测试需要 PATH 中的 ffmpeg/ffprobe，缺失时会明确跳过。外部仓库副本中的指令不作为本仓库的维护规则。
 
 ## 修改边界
 

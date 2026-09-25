@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Render the human-readable seven-column visual plan from its JSON source."""
+"""Render the seven-column visual plan and per-shot production routes from JSON."""
 
 from __future__ import annotations
 
@@ -10,6 +10,8 @@ from pathlib import Path
 
 TABLE_HEADER = "| 镜头 | 时间 | 配音文案 | 画面类型 | 画面设计 | 动态变化 | 画面衔接 |"
 TABLE_SEPARATOR = "|---|---|---|---|---|---|---|"
+ROUTE_HEADER = "| 镜头 | A/B | 动效方式 | 主制作工具 | 决策依据与辅助链路 |"
+ROUTE_SEPARATOR = "|---|---|---|---|---|"
 DISPLAY_TYPES = {"人物画面", "场景画面", "真实素材", "信息图形", "文字动效"}
 
 
@@ -52,6 +54,8 @@ def display_type(shot: dict) -> str:
         return "真实素材"
     if presentation == "text-motion" or material_type == "text-only":
         return "文字动效"
+    if presentation == "scene":
+        return "场景画面"
     return "信息图形"
 
 
@@ -98,6 +102,35 @@ def transition_text(shot: dict) -> str:
     if from_previous and to_next:
         return f"前接：{from_previous}<br>后接：{to_next}"
     return from_previous or to_next or "待补充"
+
+
+def motion_intent_text(shot: dict) -> str:
+    design = shot.get("visual_design") or {}
+    intent = design.get("motion_intent")
+    if isinstance(intent, (dict, list)):
+        return json.dumps(intent, ensure_ascii=False)
+    if intent:
+        return str(intent)
+    if shot.get("static_reason"):
+        return "有理由静止：" + str(shot["static_reason"])
+    return "按动态变化与旁白节拍实现（需明确方式）"
+
+
+def production_route_text(shot: dict) -> str:
+    production = shot.get("production") or {}
+    decision = production.get("runtime_decision") or {}
+    generation = production.get("video_generation") or {}
+    parts: list[str] = []
+    if decision.get("mode"):
+        parts.append(f"决策：{decision['mode']}")
+    if decision.get("reason"):
+        parts.append(f"原因：{decision['reason']}")
+    if generation.get("workflow"):
+        parts.append(f"workflow：{generation['workflow']}")
+    fallbacks = production.get("fallback_tools") or []
+    if fallbacks:
+        parts.append("回退：" + " → ".join(str(item) for item in fallbacks))
+    return "；".join(parts) or "按逐镜计划制作"
 
 
 def materials_gaps(plan: dict) -> list[str]:
@@ -165,6 +198,18 @@ def render(plan: dict) -> str:
             design_text(shot),
             changes_text(shot),
             transition_text(shot),
+        ]
+        lines.append("| " + " | ".join(md_cell(cell) for cell in cells) + " |")
+
+    lines.extend(["", "## 逐镜制作路由", "", ROUTE_HEADER, ROUTE_SEPARATOR])
+    for shot in shots:
+        production = shot.get("production") or {}
+        cells = [
+            shot.get("id", ""),
+            shot.get("screen_role", ""),
+            motion_intent_text(shot),
+            production.get("primary_tool", "待选择"),
+            production_route_text(shot),
         ]
         lines.append("| " + " | ".join(md_cell(cell) for cell in cells) + " |")
 

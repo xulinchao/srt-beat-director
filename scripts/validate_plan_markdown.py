@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate the user-facing seven-column visual-plan Markdown contract."""
+"""Validate the visual-plan table and its derived per-shot production routes."""
 
 from __future__ import annotations
 
@@ -9,9 +9,13 @@ import re
 import sys
 from pathlib import Path
 
+from render_plan_markdown import md_cell, motion_intent_text
+
 
 TABLE_HEADER = "| 镜头 | 时间 | 配音文案 | 画面类型 | 画面设计 | 动态变化 | 画面衔接 |"
 TABLE_SEPARATOR = "|---|---|---|---|---|---|---|"
+ROUTE_HEADER = "| 镜头 | A/B | 动效方式 | 主制作工具 | 决策依据与辅助链路 |"
+ROUTE_SEPARATOR = "|---|---|---|---|---|"
 TIME_RE = re.compile(r"^(\d+)ms-(\d+)ms$")
 REQUIRED_SECTIONS = ("需要补充的素材", "需要确认的视觉方向", "制作难度较高的镜头")
 
@@ -82,8 +86,52 @@ def validate(plan: dict, markdown: str) -> dict:
                 errors.append(f"{expected_id} 结束时间不晚于开始时间")
             if start_ms != shot.get("start_ms") or end_ms != shot.get("end_ms"):
                 errors.append(f"{expected_id} 表格时间与 JSON 不一致")
-        if values[2].replace("<br>", "\n") != str(shot.get("verbatim_text") or ""):
+        if values[2] != md_cell(shot.get("verbatim_text") or ""):
             errors.append(f"{expected_id} 配音文案与 JSON 的 verbatim_text 不一致")
+
+    try:
+        route_section_index = lines.index("## 逐镜制作路由")
+    except ValueError:
+        errors.append("缺少表格后的逐镜制作路由")
+        route_section_index = -1
+    route_rows: list[str] = []
+    if route_section_index >= 0:
+        try:
+            route_header_index = lines.index(ROUTE_HEADER, route_section_index + 1)
+        except ValueError:
+            errors.append("逐镜制作路由缺少标准表头")
+            route_header_index = -1
+        if route_header_index >= 0:
+            if route_header_index + 1 >= len(lines) or lines[route_header_index + 1] != ROUTE_SEPARATOR:
+                errors.append("逐镜制作路由表头下一行必须是标准 Markdown 分隔线")
+            for line in lines[route_header_index + 2 :]:
+                if not line.startswith("|"):
+                    break
+                route_rows.append(line)
+    if len(route_rows) != len(expected_shots):
+        errors.append(f"制作路由镜头行数为 {len(route_rows)}，但 JSON 镜头数为 {len(expected_shots)}")
+    for index, (line, shot) in enumerate(zip(route_rows, expected_shots), start=1):
+        cells = split_row(line)
+        if len(cells) != 7 or cells[0] != "" or cells[-1] != "":
+            errors.append(f"第 {index} 个制作路由行不是五列：{line}")
+            continue
+        values = cells[1:-1]
+        expected_id = f"S{index:03d}"
+        if values[0] != expected_id or values[0] != shot.get("id"):
+            errors.append(f"第 {index} 个制作路由镜头编号应为 {expected_id}，实际为 {values[0]}")
+        if values[1] != str(shot.get("screen_role") or ""):
+            errors.append(f"{expected_id} 制作路由 A/B 职责与 JSON 不一致")
+        if values[2] != md_cell(motion_intent_text(shot)):
+            errors.append(f"{expected_id} 制作路由动效方式与 JSON 不一致")
+        if not (shot.get("visual_design") or {}).get("motion_intent") and not shot.get("static_reason"):
+            errors.append(f"{expected_id} JSON 缺少明确动效方式或静止理由")
+        primary_tool = str((shot.get("production") or {}).get("primary_tool") or "")
+        if not primary_tool.strip():
+            errors.append(f"{expected_id} JSON 缺少主制作工具")
+        if values[3] != md_cell(primary_tool):
+            errors.append(f"{expected_id} 制作路由工具与 production.primary_tool 不一致")
+        if not values[2]:
+            errors.append(f"{expected_id} 制作路由缺少动效方式")
 
     for section in REQUIRED_SECTIONS:
         if f"## {section}" not in markdown:

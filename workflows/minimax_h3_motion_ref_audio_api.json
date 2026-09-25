@@ -1,0 +1,286 @@
+{
+  "266": {
+    "inputs": {
+      "value": "以参考图为主体、构图、材质和配色依据，制作一段简洁的知识视频动效。画面先建立主体，随后用一次清晰的移动或组装表达关系变化，最后停在稳定的结果状态。保持物件几何与空间关系一致，避免无意义的漂浮和循环。仅在移动、接触和落定处生成与材质匹配的短促音效，声音与动作同步；无对白、无旁白、无背景音乐。可读文字、数值和精确 UI 由后期程序化排版完成，不要求模型重新绘制。实际时长与画布以节点参数为准。"
+    },
+    "class_type": "PrimitiveStringMultiline",
+    "_meta": {
+      "title": "Input Text (Prompt)"
+    }
+  },
+  "267": {
+    "inputs": {
+      "aspect_ratio": "16:9 (Widescreen)",
+      "megapixels": 0.98,
+      "multiple": 32
+    },
+    "class_type": "ResolutionSelector",
+    "_meta": {
+      "title": "Resolution Selector (Size)"
+    }
+  },
+  "270": {
+    "inputs": {
+      "clip_name": "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
+      "type": "minimax",
+      "device": "default"
+    },
+    "class_type": "CLIPLoader",
+    "_meta": {
+      "title": "加载CLIP"
+    }
+  },
+  "272": {
+    "inputs": {
+      "vae_name": "minimax_h3_video_vae_fp16.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "加载VAE"
+    }
+  },
+  "273": {
+    "inputs": {
+      "vae_name": "minimax_h3_audio_vae_fp32.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "加载VAE"
+    }
+  },
+  "274": {
+    "inputs": {
+      "model": [
+        "281",
+        0
+      ],
+      "conditioning": [
+        "310",
+        0
+      ]
+    },
+    "class_type": "BasicGuider",
+    "_meta": {
+      "title": "基本引导器"
+    }
+  },
+  "275": {
+    "inputs": {
+      "noise_seed": 123456789
+    },
+    "class_type": "RandomNoise",
+    "_meta": {
+      "title": "随机噪波"
+    }
+  },
+  "276": {
+    "inputs": {
+      "noise": [
+        "275",
+        0
+      ],
+      "guider": [
+        "274",
+        0
+      ],
+      "sampler": [
+        "281",
+        1
+      ],
+      "sigmas": [
+        "281",
+        2
+      ],
+      "latent_image": [
+        "310",
+        1
+      ]
+    },
+    "class_type": "SamplerCustomAdvanced",
+    "_meta": {
+      "title": "自定义采样器（高级）"
+    }
+  },
+  "277": {
+    "inputs": {
+      "value": 8
+    },
+    "class_type": "PrimitiveFloat",
+    "_meta": {
+      "title": "Float (Duration)"
+    }
+  },
+  "278": {
+    "inputs": {
+      "expression": "max(5, round(a * 24)) + (5 - (max(5, round(a * 24)) % 17)) % 17",
+      "values.a": [
+        "277",
+        0
+      ]
+    },
+    "class_type": "ComfyMathExpression",
+    "_meta": {
+      "title": "数学表达式"
+    }
+  },
+  "280": {
+    "inputs": {
+      "av_latent": [
+        "276",
+        0
+      ],
+      "video_vae": [
+        "272",
+        0
+      ],
+      "audio_vae": [
+        "273",
+        0
+      ]
+    },
+    "class_type": "MiniMaxH3AVDecodeT8",
+    "_meta": {
+      "title": "MiniMax H3 AV Decode (T8)"
+    }
+  },
+  "281": {
+    "inputs": {
+      "video_steps": 8,
+      "audio_steps": 10,
+      "shift_video": 12,
+      "shift_audio": 3,
+      "model": [
+        "324",
+        0
+      ],
+      "av_latent": [
+        "310",
+        1
+      ]
+    },
+    "class_type": "MiniMaxH3MultiRateSamplerEXPT8",
+    "_meta": {
+      "title": "EXP 4 video / 10 audio (10 full H3 calls)"
+    }
+  },
+  "282": {
+    "inputs": {
+      "image": "motion-reference.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "加载图像"
+    }
+  },
+  "306": {
+    "inputs": {
+      "frame_rate": 24,
+      "loop_count": 0,
+      "filename_prefix": "knowledge-abroll/h3-motion-reference-audio",
+      "format": "video/h264-mp4",
+      "pix_fmt": "yuv420p",
+      "crf": 19,
+      "save_metadata": true,
+      "trim_to_audio": false,
+      "pingpong": false,
+      "save_output": true,
+      "images": [
+        "280",
+        0
+      ],
+      "audio": [
+        "280",
+        1
+      ]
+    },
+    "class_type": "VHS_VideoCombine",
+    "_meta": {
+      "title": "Video Combine 🎥🅥🅗🅢"
+    }
+  },
+  "310": {
+    "inputs": {
+      "prompt": [
+        "266",
+        0
+      ],
+      "width": [
+        "267",
+        0
+      ],
+      "height": [
+        "267",
+        1
+      ],
+      "length": [
+        "278",
+        1
+      ],
+      "task_type": "Ref2VA",
+      "audio_mode": "native",
+      "audio_denoise_strength": 1,
+      "add_source_as_reference": false,
+      "prompt_primary_audio_ordinal": 0,
+      "strict_prompt_tags": true,
+      "ref_image_size": "max",
+      "reference_video_policy": "official_2_to_15s",
+      "allow_above_reference_area": true,
+      "clip": [
+        "270",
+        0
+      ],
+      "video_vae": [
+        "272",
+        0
+      ],
+      "audio_vae": [
+        "273",
+        0
+      ],
+      "ref_images.ref_image_0": [
+        "282",
+        0
+      ]
+    },
+    "class_type": "MiniMaxH3AudioConditioningT8",
+    "_meta": {
+      "title": "MiniMax H3 Audio Conditioning (T8)"
+    }
+  },
+  "314": {
+    "inputs": {
+      "unet_name": "minimax_h3_ref2va_pruned_int8_convrot.safetensors",
+      "weight_dtype": "default"
+    },
+    "class_type": "UNETLoader",
+    "_meta": {
+      "title": "UNet加载器"
+    }
+  },
+  "319": {
+    "inputs": {
+      "model": [
+        "314",
+        0
+      ]
+    },
+    "class_type": "MiniMaxH3MemoryEfficientSageAttentionPatch",
+    "_meta": {
+      "title": "MiniMax H3 Mem Eff Sage Attention Patch"
+    }
+  },
+  "324": {
+    "inputs": {
+      "lora_name": "minimax_h3_ref2v_turbo_4step_v0.1_comfyui_bf16.safetensors",
+      "strength_model": 1,
+      "model": [
+        "319",
+        0
+      ]
+    },
+    "class_type": "LoraLoaderBypassModelOnly",
+    "_meta": {
+      "title": "lora only"
+    }
+  }
+}

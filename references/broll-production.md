@@ -16,6 +16,10 @@
 
 ## 选型顺序
 
+先区分表达载体：生成式解释场景使用 `no-material + scene`，按动作、参考素材和工具能力选择；精确图形/文字关系使用 `no-material + infographic`，再走下面的模板研究流程。生成场景不能标成真实证据，也不为满足模板字段编造代码来源。所有 B-roll 仍保存 `planning/template-selection/<shot-id>.json`：生成场景在该报告记录 `shot_id`、`design_ref`、`primary_tool`、选择理由和参考来源，`template_id` 可为 null；只有代码模板路径使用模板选择器和外部研究门。
+
+先按计划选择运动形式：自然连续的人物/场景动作、刻意的定格状态切换或程序化信息动效。定格动画在 `visual_design.motion_intent` 写明每个状态的停留与跳变，`motion_sequence` 使用 `state-sequence` 并与旁白节拍逐项对应；不因使用多张状态图就自动调用 H3。需要首尾帧之间生成运动时，可按逐镜工具决策选择 MiniMax H3；本镜因解释内容而属于 B-roll，其他 H3 镜头仍按自身叙事职责分类。若用户明确要求 IP 且同意其参与 B-roll，仍按本段理解任务决定它是否出现及承担什么作用。
+
 候选推荐不等于制作工具决策。选型时读取 [制作工具决策](broll-runtime-selection.md)，先检查表达、视觉、节拍与运行条件，再把 `runtime_decision` 写入镜头 `production`。合格来源可以在 HyperFrames 或 Remotion 原生制作，二者在 ChatCut 素材层汇合。
 
 1. 先查本地模板库。存在合格模板时，只替换当前镜头需要的文案、素材和配置，不重写核心动作。

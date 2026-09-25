@@ -28,31 +28,36 @@ metadata:
 | 创建或修改项目记录 | [contracts.md](references/contracts.md) 对应章节：目录 §1、真源 §2、配置 §3、内容 §4、计划 §5、模板 §6、交付 §7、提示词 §8 |
 | 设计规范、角色互动或新视觉方向 | [design-system.md](references/design-system.md)、[DESIGN 模板](templates/DESIGN.md)；内容规划即加载，设计未定可保留草稿 |
 | 内容分析与分镜 | [production-prompts.md](references/production-prompts.md) §1 `visual-plan-v1` |
-| 单张 IP 参考生成三视图 | 生产提示词 §2 `character-turnaround-v1`；已有核实三视图不重复生成 |
-| A-roll 生产 | 生产提示词 §3 `a-roll-image-v1`、§5 `a-roll-action-sequence-v1`；固定人物视角加 §4 `a-roll-view-v1` |
-| B-roll 选型与生产 | 生产提示词 §6 `b-roll-motion-selection-v1`、[semantic-template-mapping.md](references/semantic-template-mapping.md)、[broll-production.md](references/broll-production.md) |
+| 单张人物身份参考生成三视图 | 生产提示词 §2 `character-turnaround-v1`；仅重复人物需要时使用，已有核实三视图不重复生成 |
+| A-roll 生产（图片、状态序列或连续动画） | 生产提示词 §3 `a-roll-image-v1`、§5 `a-roll-action-sequence-v1`；固定人物视角加 §4 `a-roll-view-v1`；选用生成视频时读 [comfyui-video-production.md](references/comfyui-video-production.md)，选用程序化动画时读 [制作工具决策](references/broll-runtime-selection.md)；GPT Image 2 不可用时读取 [comfyui-image-production.md](references/comfyui-image-production.md) |
+| B-roll 选型与生产 | 生产提示词 §6 `b-roll-motion-selection-v1`、[semantic-template-mapping.md](references/semantic-template-mapping.md)、[broll-production.md](references/broll-production.md)；需要本地图片或视频时读取 [comfyui-image-production.md](references/comfyui-image-production.md) 与 [comfyui-video-production.md](references/comfyui-video-production.md) |
 | 无素材信息图未命中合格本地模板 | [broll-external-research.md](references/broll-external-research.md)；按当前结构读取具体候选卡及必要源码 |
-| 程序化 B-roll 工具选择 | [broll-runtime-selection.md](references/broll-runtime-selection.md)；只加载选中框架的执行 Skill，HyperFrames 用 `hyperframes`，Remotion 用可用的制作/渲染技能 |
-| 盘点或操作 ChatCut | [chatcut-production.md](references/chatcut-production.md) |
+| 逐镜工具选择（A/B 均适用） | [broll-runtime-selection.md](references/broll-runtime-selection.md)；只加载选中框架的执行 Skill，HyperFrames 用 `hyperframes`，Remotion 用可用的制作/渲染技能；ComfyUI 视频先运行环境探测 |
+| 完整视频的 ChatCut 主工程与时间线（新建或续做） | [chatcut-production.md](references/chatcut-production.md)；续做时先只读盘点，完整新制在分镜和视觉基线通过后创建 |
 | 分镜动作音效、声音组装与验收 | [sound-design.md](references/sound-design.md)；沿用既有字段与审核模式 |
-| 阶段审核、恢复过期状态或交付 | [qa.md](references/qa.md) 对应门控 |
+| 阶段审核、恢复过期状态或交付 | [qa.md](references/qa.md) 对应门控；快照与扫描证据字段见契约 §9 |
+| 沉淀可复用 B-roll 模板 | [template-library.md](references/template-library.md)，只认证实际渲染通过的模板 |
 
 生产提示词是执行真源，按阶段代入真实输入并保存实际提示词实例；字段和命令见数据契约 §8。不能只引用原则或伪造历史使用记录。依赖以随 Skill 发布的文件、当前输入和实际可用工具为准，不要求读取未随包发布的本地研究目录。
 
 ## 输入与执行路径
 
-完整生产需要可解析的 SRT 和对应 MP3；继续现有项目时先定位其已保存输入。可选输入包括 IP、三视图、视觉参考、真实截图/录屏、品牌规范、本地模板和输出规格。参考用途登记到 `input/references/index.json`，区分 `character-identity`、`visual-style`、`layout-reference`、`motion-reference`、`verified-media`，再运行 `scripts/validate_references.py`。同一参考可登记多个用途，未声明的用途不能自行推断。
+完整生产需要可解析的 SRT 和对应 MP3；继续现有项目时先定位其已保存输入。可选输入包括 IP、三视图、视觉参考、真实截图/录屏、品牌规范、本地模板和输出规格。默认不设计或加入固定 IP 人物；只有用户明确要求设计或使用 IP、且尚未说明 B-roll 用途时，才询问一次该 IP 是否参与 B-roll，并把答复写入单片 DESIGN 的角色参与说明。已有明确答复直接沿用。未要求 IP 时不为填满人物画面而创造跨镜头 IP；普通剧情人物是否出现仍由文案决定。参考用途登记到 `input/references/index.json`，区分 `character-identity`、`visual-style`、`layout-reference`、`motion-reference`、`verified-media`，再运行 `scripts/validate_references.py`。同一参考可登记多个用途，未声明的用途不能自行推断。
 
 从配置、输入和用户要求确定主画面模式（`fixed-character-micro-scene` / `full-ai-scene`）、画幅、分辨率、帧率、平台、人物与风格、真实性限制、字幕安全区、样片区间和输出目录。没有现有规格时，默认横屏 `16:9`、`1920x1080`、`30fps`、约 45 秒代表性样片；用户明确指定或已有项目已确定的规格优先。初始化新任务时，将选定规格显式传入 `init_project.py` 的 `--aspect-ratio`、`--width`、`--height` 和 `--fps`。
 
-- **ChatCut 主时间线**：用户指定 ChatCut 或继续其现有项目时，ChatCut Desktop 管理素材池、字幕、声音、主时间线和最终导出。重组时优先复制时间线为新版本，保留原版本和素材。
-- **HyperFrames 主工程**：仅在用户明确选择，或环境没有 ChatCut 且用户接受时使用。B-roll 使用 HyperFrames 不会自动改变整片主时间线。
+- **ChatCut 主工程（完整视频默认）**：新制完整视频默认使用 ChatCut Desktop 管理素材池、字幕、声音、主时间线和最终导出；续做已有项目时先只读盘点并保护原时间线。`init_project.py` 创建的是本地工作区，不等于 ChatCut 项目；新 ChatCut 项目须在分镜与视觉基线通过后创建。
+- **单镜制作工具**：在视觉编排阶段为每镜填写 `production.primary_tool`；HyperFrames、Remotion、ChatCut Motion Graphics、ComfyUI MiniMax H3 等只负责计划指定的镜头/动效资产。HyperFrames 或 Remotion 渲染出的镜头必须导入 ChatCut，不能因此改换主时间线。
+- **HyperFrames 主工程例外**：用户明确要求独立 HyperFrames 成片，或在 ChatCut 不可用时已接受替代路径，才采用；不能因单镜选用 HyperFrames 而改换主工程。仅做分析、分镜或素材清单时不创建任何剪辑工程。
 - **阶段交付**：只做分析、分镜或素材清单时，完成对应交付后停止；局部修复只进入受影响阶段及其依赖检查。
 
 ## 核心制作约束
 
+决策顺序固定为：理解文案与观众任务 → 确定 A/B 叙事职责 → 设计主体、关系、状态和旁白节拍 → 选择制作工具 → 制作资产 → ChatCut 组装 → 实际成片验收。工具选择不得反向改写叙事职责；H3 可制作 A-roll 人物叙事，也可制作 B-roll 解释性场景，HyperFrames/Remotion 同样按镜头需要使用。画风、情绪、角色和材质由每片 DESIGN 决定，具体案例的偏好不作为本 Skill 的默认画风。
+
 - A-roll 讲人，承载态度、经历、情绪、动作和过渡；B-roll 讲内容，承载概念、关系、步骤、比较和证据。人物视角、素材类型、表现形式和语义结构分别记录，字段以数据契约为准。
 - A/B 是叙事职责，不固定配色、时长比例或交替节奏。B-roll 可独立编排人物、文字和物件协作；首版仍不把浮层直接盖到已有 A-roll 时间线上。统一视觉规则由 [DESIGN](references/design-system.md) 管理，真实截图/录屏保留原色。
+- 每镜先确定需要自然连续动作、刻意的定格状态切换、程序化信息动效还是有理由的静止，再选制作工具。人物/场景连续动作适合按需使用 ComfyUI 视频工作流；定格动画优先评估独立状态图与时间线节奏，需生成帧间动作时再评估视频生成，信息动效仍用适合精确排版和旁白节拍的工具。不能把“所有视频都走 ComfyUI”或“所有状态图都要插帧”当作默认规则。
 - 先阅读全文，按完整语义分段，不按单条字幕或固定秒数机械切镜。连续三镜以上同类画面写明语义理由，并改变视角或信息结构。
 - 每个 B-roll 语义段必须先确定一个能表达本段关系的具体 `visual_structure`，例如文档组装、双栏对比、问题雷达、经历桥、判断天平或学习循环；不能把“深色背景、三张卡片、列表”当作所有知识段的默认答案。统一的是配色、字体、材质和标注系统，变化的是空间关系、阅读路径和动作语法。
 - 选择 B-roll 结构前对照最近三个 B-roll，审查复用的解释收益，不以重复本身否决。核心图递进、同维度案例比较和结尾回顾可保持布局；在 `broll_structure_exceptions` 记录理由与内容推进或回顾用途，不能靠改名冒充新结构。
@@ -80,7 +85,7 @@ metadata:
 
 提取主题、主张、章节、论证、情绪和结论，合并相邻字幕为完整语义段，写清观众理解点和未经原文支持的推断，保存内容分析。仅要求分析时在此交付；需要分镜时再使用 `visual-plan-v1`，保存 `planning/visual-plan-prompt.json` 并生成 `planning/visual-plan.json`。
 
-每镜记录 A/B 职责、表现形式、构图、有效变化、衔接、来源、工具、回退和素材缺口。`changes` 与 `narration_beats` 一一对应，节拍绑定原始 cue 起点与逐字短语。B-roll 选型按上表读取引用，先用 `validate_template_index.py`、`validate_semantic_map.py` 检查当前索引与语义目录，再运行 `select_broll_template.py` 保存逐镜选择报告，确定 `semantic_structure`、具体 `visual_structure`、`semantic_pattern`、`item_count`、模板和工具；选择时列出最近三个 B-roll 的结构签名并完成复用审查，需要外部研究时先完成研究记录与校验。尚未解决的项留在草稿或素材请求中，不伪造通过。
+每镜记录 A/B 职责、表现形式、构图、有效变化、衔接、来源、`visual_design.motion_intent`（动效方式及旁白触发/停留节奏）、`production.primary_tool`（该镜最终视觉资产的制作工具）、回退和素材缺口；`changes` 与 `narration_beats` 一一对应，节拍绑定原始 cue 起点与逐字短语。工具须在分镜阶段逐镜确定并写入 JSON，在七列表格之后的“逐镜制作路由”表中可读呈现。A/B 职责由叙事用途确定，H3、HyperFrames、Remotion 均不自动决定镜头职责；若以首尾帧驱动，首帧、尾帧、H3 workflow 和运动提示分别记录。程序化信息图 B-roll 选型按上表读取引用，先用 `validate_template_index.py`、`validate_semantic_map.py` 检查当前索引与语义目录，再运行 `select_broll_template.py` 保存逐镜选择报告，确定 `semantic_structure`、具体 `visual_structure`、`semantic_pattern`、`item_count`、模板和工具；选择时列出最近三个 B-roll 的结构签名并完成复用审查，需要外部研究时先完成研究记录与校验。尚未解决的项留在草稿或素材请求中，不伪造通过。
 
 生成可审阅的七列表格：`镜头 | 时间 | 配音文案 | 画面类型 | 画面设计 | 动态变化 | 画面衔接`。编号从 `S001` 连续递增，时间用原始边界毫秒值，配音逐字保留。表后列出“需要补充的素材”“需要确认的视觉方向”“制作难度较高的镜头”，没有则写“无”。
 
@@ -96,7 +101,7 @@ python scripts/validate_plan_markdown.py --plan <project>/planning/visual-plan.j
 
 读取 [设计真源与角色互动](references/design-system.md)，使用 [DESIGN 模板](templates/DESIGN.md)。已确认且适用的规范直接复用；新方向先以真实文案审阅代表 A/B、角色互动和高信息量镜头的开始/变化/结果，再完成带口播短片验证。设计、计划、选型和提示词绑定同一 design_ref，运行 validate_design.py；不预设账号最终画风，不把自检当用户确认。
 
-分别建立人物身份与视觉系统规范，确定构图安全区、B-roll UI token，并制作典型 A/B 画面。单张 IP 参考需规范化时使用 `character-turnaround-v1`，保留 `prompts/character/` 实例；已有核实三视图不重复生成。逐项核对发色、发型、头身比例、服装和标志物。
+建立视觉系统规范；有重复人物或用户要求的 IP 时再建立相应人物身份规范。确定构图安全区、B-roll UI token，并制作典型 A/B 画面。用户要求原创 IP 但没有参考图时，先按其设计要求用默认图片工具制作候选基准图，经过既有视觉基线审阅后才把选定版本登记为身份参考，不自行将候选图提升为身份真源。已有单张获准的人物身份参考、且需要规范化重复人物时才使用 `character-turnaround-v1`，保留 `prompts/character/` 实例；已有核实三视图不重复生成。普通重复人物的身份规范不等于用户要求设计 IP。对实际使用的重复人物逐项核对发色、发型、头身比例、服装和标志物。
 
 人物身份与视觉系统分别记录参考范围、批准状态和哈希。只改信息卡、配色或动效不使人物身份自动失效；人物真源改变使依赖它的 A-roll 与角色参与的 B-roll 过期。计划和必要视觉基线通过后才新建 ChatCut 项目。
 
@@ -106,9 +111,11 @@ python scripts/validate_plan_markdown.py --plan <project>/planning/visual-plan.j
 
 A-roll 使用画面与动作序列提示词，固定人物再使用视角提示词。`action_sequence` 原样继承计划节拍，数量由语义决定，不按时长凑动作。单状态需计划 `static_reason` 并在实例中继承；多状态逐项保留资产或连续动画证据。以简洁人物处境为主，按语义选择视角、动作、景别和场景关系。
 
-B-roll 使用 `motion_sequence` 原样继承计划节拍，复用编排阶段已通过的索引检查、选型、结构复用审查和研究记录；候选、输入或约束变化时才重新选择。已核实素材优先复用。合格模板具备预览、来源、明确动作阶段与质量批准；无合格模板按外部研究门选择唯一来源，记录许可证、原框架和兼容性，只做允许的最小适配。候选均不适合时，记录拒绝理由和吸收的运动原则后才自建；目录无候选才研究未索引仓库。未声明许可证的公开代码只允许抽象结构研究。生产时不得把已批准的结构重新退化成通用列表、三卡或同构容器。
+B-roll 使用 `motion_sequence` 原样继承计划节拍；生成场景保存工具与参考素材选择依据，程序化信息图复用编排阶段已通过的索引检查、选型、结构复用审查和研究记录；候选、输入或约束变化时才重新选择。已核实素材优先复用。合格模板具备预览、来源、明确动作阶段与质量批准；无合格模板按外部研究门选择唯一来源，记录许可证、原框架和兼容性，只做允许的最小适配。候选均不适合时，记录拒绝理由和吸收的运动原则后才自建；目录无候选才研究未索引仓库。未声明许可证的公开代码只允许抽象结构研究。生产时不得把已批准的结构重新退化成通用列表、三卡或同构容器。
 
-程序化 B-roll 记录 `production.runtime_decision`；新制作默认 HyperFrames，合格成熟效果可在原框架制作，条件相近优先 HyperFrames，移植需具体依据。来源实现失败时回退到另一个已记录候选并重新确定唯一来源，不拼接多个骨架。仍失败则记录缺口，继续其他镜头；静态 SVG 只能是动画组件，不能冒充完成动效。
+程序化镜头记录 `production.runtime_decision`；只有代码模板/动效实现层的新制作默认 HyperFrames，合格成熟效果可在原框架制作。Remotion 与 HyperFrames 按逐镜候选、表达、节拍和运行条件选用，不要求整片同时使用两者。需要生成连续场景动作或有用首尾帧约束的镜头，可按 [ComfyUI 视频资产生产](references/comfyui-video-production.md) 评估 MiniMax H3；其生成镜头沿用计划中的 A/B 职责并导入 ChatCut。有意设计的定格动画可使用状态序列，或在设计确需首尾帧生成时使用相应 H3 workflow；在 `motion_intent` 中写清跳变/连续运动的选择及原因。条件相近优先 HyperFrames，移植需具体依据。来源实现失败时回退到另一个已记录候选并重新确定唯一来源，不拼接多个骨架。仍失败则记录缺口，继续其他镜头；静态 SVG 只能是动画组件，不能冒充完成动效。
+
+出图默认使用 GPT Image 2；不可用或用户明确要求本地生成时，按 [ComfyUI 本地图片资产生产](references/comfyui-image-production.md) 记录实际切换原因，先探测本地节点和模型，再提交对应工作流。若镜头选用 ComfyUI 连续动作，首尾状态图可由默认出图工具制作，但要从同一已核实身份/场景参考建立，优先由首帧编辑尾帧，检查人物、服装、背景、机位、画幅和计划动作的一致性；不因此强制改用本地出图。图片通过检查并登记后，才能作为 A-roll、B-roll 或视频首尾帧输入。
 
 逐项记录提示词、模型、参数、版本、来源和校验结果。工具或选型变化回写计划、重生可读视图并复核受影响门控。
 
@@ -122,7 +129,7 @@ B-roll 使用 `motion_sequence` 原样继承计划节拍，复用编排阶段已
 
 ### 6. 全片与验收
 
-沿用有效基线完成全片，低成本预览后按 [qa.md](references/qa.md) §6–7 逐镜检查、按 B-roll 出现顺序复查视觉结构重复、审计节拍到实际 item/asset 的映射并导出。ChatCut 路径由 ChatCut Desktop 导出最终 MP4。修复后验证受影响内容；交付前运行 `validate_state.py`、`validate_prompt_usage.py --stage produced` 和 `validate_delivery.py --mode review`，批准后运行 `--mode final`。
+沿用有效基线完成全片，低成本预览后按 [qa.md](references/qa.md) §6–7 逐镜检查、按 B-roll 出现顺序复查视觉结构重复、审计节拍到实际 item/asset 的映射并导出。ChatCut 路径由 ChatCut Desktop 导出最终 MP4。每次导出或修复后运行 `scan_video.py`，复核候选并把报告哈希绑定到 QA；交付前运行 `validate_state.py`、`validate_prompt_usage.py --stage produced` 和 `validate_delivery.py --mode review`，批准后运行 `--mode final`。样片批准须绑定当前依赖快照，实际命令见 QA §5、§7。
 
 报告按 [ChatCut 执行流程](references/chatcut-production.md) §5 和数据契约 §7 记录实际资产、每镜使用的 `prompt_id` 与提示词实例、来源、工程/渲染路径、时间线 ID、最终绝对路径与剩余缺口。计划、静态预览或仓库链接不能冒充已完成资产。
 

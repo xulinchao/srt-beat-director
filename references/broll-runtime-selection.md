@@ -1,8 +1,12 @@
-# B-roll 制作工具决策
+# 逐镜制作工具决策
 
 工具选择继承计划 design_ref 和角色互动要求。先检查分层资产、锚点、遮罩、中文字体和确定性时间轴的实现能力，再比较框架；运行框架不决定画风或人物是否参与。具体契约见 [design-system.md](design-system.md)。
 
-在完成镜头理解、检查候选预览与源码后，进入实现前读取本文件。它决定 `production.primary_tool`，不改变 A/B 职责、原始字幕、旁白节拍或主时间线。HyperFrames 与 Remotion 各自渲染镜头素材，在 ChatCut 中汇合；源码与内部动画仍在各自工程维护。
+在视觉编排阶段先为每镜拟定动效方式和 `production.primary_tool`；完成镜头理解、检查候选预览与源码后，进入实现前读取本文件并锁定选择。它决定逐镜制作工具，不改变 A/B 职责、原始字幕、旁白节拍或主时间线。完整成片的主工程仍为 ChatCut；HyperFrames 与 Remotion 各自渲染镜头素材，在 ChatCut 中汇合，源码与内部动画仍在各自工程维护。本文件的工具能力判断适用于 A/B 两类镜头；B-roll 模板研究规则仅用于相应信息图镜头。MiniMax H3 沿用镜头已确定的叙事职责，生成参数记录在 `production.video_generation`。
+
+先从镜头要表达的变化判断运动方式：自然连续的人物/场景动作、刻意的定格状态切换、需要精确排版的信息动效或有理由的静止。定格动画可用独立状态图与时间线节奏，也可在分镜明确需要首尾帧间生成视频时评估 H3；不能因为画面需要动就默认调用 H3。精确排版的信息动效优先沿用合格模板或程序化制作。选用生成式视频资产时读取 [comfyui-video-production.md](comfyui-video-production.md) 并探测本机服务；有设计好的首帧、尾帧和运动提示词时，优先使用 `comfyui-minimax-h3-fl2v`，缺少尾帧时可评估 `comfyui-minimax-h3-i2v`，参考图驱动的镜头使用 `comfyui-minimax-h3-r2v` 或多图参考变体。MiniMax H3 可生成 A-roll 叙事动作或 B-roll 解释性动画；ComfyUI 只是该镜头的资产生成器，产物经过视频流和视觉检查、登记路径后再导入 ChatCut 主时间线。
+
+图片默认由 GPT Image 2 生成和编辑。不可用时读取 [comfyui-image-production.md](comfyui-image-production.md)，把本地 ComfyUI 记录为 `fallback`，保留不可用原因和 `source_runtime=gpt-image2`；用户明确要求本地出图时按 `user-request` 记录，不伪造工具故障。生成式连续动作的首尾图可继续由 GPT Image 2 制作，但须检查同一人物/场景参考、服装、机位、背景、画幅与动作落点的一致性。使用本地图片工作流时，按实际输入槽选择已收录的 Qwen 2.1 工作流；所有图片先通过尺寸、格式和视觉检查，再进入 ChatCut 或后续视频生成。
 
 ## 先筛选效果，再选择工具
 
@@ -20,18 +24,19 @@
 | 情况 | 决策 |
 |---|---|
 | 用户明确指定本镜工具 | 遵循指定；实际能力不足时说明阻塞，不偷偷换框架 |
+| 使用 MiniMax H3 生成视频资产 | 适用于计划明确的 A-roll 或 B-roll 动作；首尾帧生成方式见 `comfyui-video-production.md`，最终导入 ChatCut |
 | 继续已通过样片的镜头，原框架能完成修改 | 保留原框架，只修改受影响的内容 |
 | 合格成熟效果在 HyperFrames 中已有实现 | 原生复用 HyperFrames |
 | 合格成熟效果在 Remotion 中已有实现 | 原生复用 Remotion，渲染后导入 ChatCut；不因默认偏好强制移植 |
 | 两边均有合格实现 | 先比较表达与视觉质量，再比较内容/节拍改造量、依赖与渲染稳定性、后续修改成本；条件相近时选 HyperFrames |
-| 没有合格现成实现，需要新制作 | 默认 HyperFrames；外部候选研究仍按既有研究门执行 |
+| 程序化动画没有合格现成实现，需要新制作 | 默认 HyperFrames；信息图的外部候选研究仍按既有研究门执行 |
 | 用户明确要求移植，或源框架有已验证阻塞、目标框架有可验证收益 | 才安排跨框架移植；记录保留的效果、成本与差异，先做关键状态对照 |
 
 “三卡枚举用 Remotion”“流程图用 HyperFrames”等按题材硬分工没有依据，不作为路由。无合格模板时，也不要求为了比较工具先实现两遍。
 
 ## 逐镜记录与校验
 
-HyperFrames / Remotion 制作的 B-roll 在 `production` 内记录 `runtime_decision`。沿用已有计划时先补实际依据，不重做已完成资产、不伪造历史验证。`validate_plan.py` 检查记录完整性和工具一致性；它不判断视觉美感或证明报告内容真实。
+HyperFrames / Remotion 制作的镜头在 `production` 内记录 `runtime_decision`。沿用已有计划时先补实际依据，不重做已完成资产、不伪造历史验证。`validate_plan.py` 检查记录完整性和工具一致性；它不判断视觉美感或证明报告内容真实。
 
 ```json
 {
@@ -47,16 +52,19 @@ HyperFrames / Remotion 制作的 B-roll 在 `production` 内记录 `runtime_deci
 }
 ```
 
-- `mode`：`new-default`、`native-reuse`、`port`、`user-request` 或 `capability-exception`。
+- `mode`：`new-default`、`native-reuse`、`port`、`user-request`、`fallback` 或 `capability-exception`。
 - `new-default` 只能选择 `hyperframes`，`source_runtime` / `source_ref` 为 `null`；原因写明候选缺口，不用空话代替已要求的外部研究。
 - `native-reuse` 的 `source_runtime` 必须等于 `primary_tool`，`source_ref` 必须等于本镜 `template_id`，并有选型或研究证据。
 - `port` 的源与目标运行框架必须不同，`source_ref` 绑定本镜 `template_id`；`alternative_reason` 说明为什么原生制作不适合，并保存成本或能力证据。
 - `user-request` 附 `user_request`，保留明确指定工具的原话；`capability-exception` 用于没有原生候选但有实际工具能力理由的非默认制作，两者均保留依据。
+- `fallback` 用于外部图片工具不可用时切换本地 ComfyUI，必须填写 `source_runtime`、`reason` 和 `alternative_reason`，并保留环境探测证据。
 - `evidence` 是现存的项目相对文件路径数组，指向候选检查、运行诊断或用户约束记录。原始截图、预览、源码和检查结果由这些文件定位；不能只写仓库首页。除 `new-default` 外均必填。
 - 非默认制作与移植填写 `alternative_reason`，说明没有采用另一条路径的具体原因。
 - 当前是代码效果重制时才使用 `hyperframes` / `remotion`；直接使用已验证成片素材仍使用 `existing-media`，不为登记工具而重渲染。
 
 ## 实现、切换与交付
+
+首尾帧只约束动作端点，不能证明中间的停顿、跳变或旁白同步已经成立。定格设计还要指定状态停留和转变节奏，并检查生成视频中的实际表现。需要精确文字、数值或几何关系时，优先用确定性排版/合成保证正确性；同镜组合工具的分工写入决策理由和对应生成记录。
 
 - 只读取选中框架的执行技能：HyperFrames 使用 `hyperframes`；Remotion 使用可用的 Remotion 制作/渲染技能。尚未进行源码移植时不触发移植流程。
 - 正式制作前在选中环境完成最小运行验证。首选失败时先定位原因；依赖错误与视觉不佳分别处理。换框架必须重新记录选择依据、更新计划和受影响审核状态，不能把重写当作静默回退。

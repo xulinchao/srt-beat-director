@@ -1,0 +1,139 @@
+{
+  "1": {
+    "inputs": {
+      "file": "input.mp4"
+    },
+    "class_type": "LoadVideo",
+    "_meta": {
+      "title": "Load source video"
+    }
+  },
+  "2": {
+    "inputs": {
+      "video": [
+        "1",
+        0
+      ]
+    },
+    "class_type": "GetVideoComponents",
+    "_meta": {
+      "title": "Decode video frames and metadata"
+    }
+  },
+  "200": {
+    "inputs": {
+      "model": "seedvr2_ema_3b_fp8_e4m3fn.safetensors",
+      "device": "cuda:0",
+      "blocks_to_swap": 16,
+      "offload_device": "cpu",
+      "swap_io_components": false,
+      "cache_model": false,
+      "attention_mode": "sageattn_2"
+    },
+    "class_type": "SeedVR2LoadDiTModel",
+    "_meta": {
+      "title": "Load SeedVR2 3B FP8 with SageAttention 2"
+    }
+  },
+  "201": {
+    "inputs": {
+      "model": "ema_vae_fp16.safetensors",
+      "device": "cuda:0",
+      "encode_tiled": true,
+      "encode_tile_size": 1024,
+      "encode_tile_overlap": 128,
+      "decode_tiled": true,
+      "decode_tile_size": 1024,
+      "decode_tile_overlap": 128,
+      "tile_debug": "false",
+      "offload_device": "cpu",
+      "cache_model": false
+    },
+    "class_type": "SeedVR2LoadVAEModel",
+    "_meta": {
+      "title": "Load tiled SeedVR2 VAE"
+    }
+  },
+  "202": {
+    "inputs": {
+      "image": [
+        "2",
+        0
+      ],
+      "dit": [
+        "200",
+        0
+      ],
+      "vae": [
+        "201",
+        0
+      ],
+      "seed": 86001,
+      "resolution": 1080,
+      "max_resolution": 1920,
+      "batch_size": 5,
+      "uniform_batch_size": true,
+      "color_correction": "lab",
+      "temporal_overlap": 2,
+      "input_noise_scale": 0.0,
+      "latent_noise_scale": 0.0,
+      "offload_device": "cpu",
+      "enable_debug": false
+    },
+    "class_type": "SeedVR2VideoUpscaler",
+    "_meta": {
+      "title": "SeedVR2 temporal upscale to 1080 short edge"
+    }
+  },
+  "203": {
+    "inputs": {
+      "image": [
+        "202",
+        0
+      ],
+      "upscale_method": "lanczos",
+      "width": 1920,
+      "height": 1080,
+      "crop": "center"
+    },
+    "class_type": "ImageScale",
+    "_meta": {
+      "title": "Fit exact 1920x1080 canvas"
+    }
+  },
+  "204": {
+    "inputs": {
+      "images": [
+        "203",
+        0
+      ],
+      "fps": [
+        "2",
+        2
+      ],
+      "bit_depth": 8,
+      "color_space": "sRGB",
+      "codec": "h264"
+    },
+    "class_type": "CreateVideo",
+    "_meta": {
+      "title": "Rebuild upscaled video at source FPS"
+    }
+  },
+  "205": {
+    "inputs": {
+      "video": [
+        "204",
+        0
+      ],
+      "filename_prefix": "codex/seedvr2_video_upscale",
+      "format": "mp4",
+      "format.codec": "h264",
+      "codec": "h264"
+    },
+    "class_type": "SaveVideo",
+    "_meta": {
+      "title": "Save upscaled MP4"
+    }
+  }
+}

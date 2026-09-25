@@ -1,0 +1,333 @@
+{
+  "218": {
+    "inputs": {
+      "noise": [
+        "228",
+        0
+      ],
+      "guider": [
+        "219",
+        0
+      ],
+      "sampler": [
+        "231",
+        0
+      ],
+      "sigmas": [
+        "232",
+        0
+      ],
+      "latent_image": [
+        "245",
+        1
+      ]
+    },
+    "class_type": "SamplerCustomAdvanced",
+    "_meta": {
+      "title": "自定义采样器（高级）"
+    }
+  },
+  "219": {
+    "inputs": {
+      "model": [
+        "900",
+        0
+      ],
+      "conditioning": [
+        "245",
+        0
+      ]
+    },
+    "class_type": "BasicGuider",
+    "_meta": {
+      "title": "基本引导器"
+    }
+  },
+  "220": {
+    "inputs": {
+      "fps": 24,
+      "bit_depth": 8,
+      "color_space": "sRGB",
+      "codec": "h264",
+      "images": [
+        "222",
+        0
+      ]
+    },
+    "class_type": "CreateVideo",
+    "_meta": {
+      "title": "创建视频"
+    }
+  },
+  "221": {
+    "inputs": {
+      "filename_prefix": "srt-beat-director/minimax-h3-3ref",
+      "format": "mp4",
+      "format.codec": "h264",
+      "format.codec.encoding": "auto",
+      "codec": "h264",
+      "video": [
+        "220",
+        0
+      ]
+    },
+    "class_type": "SaveVideo",
+    "_meta": {
+      "title": "保存视频"
+    }
+  },
+  "222": {
+    "inputs": {
+      "samples": [
+        "218",
+        0
+      ],
+      "vae": [
+        "226",
+        0
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE解码"
+    }
+  },
+  "226": {
+    "inputs": {
+      "vae_name": "minimax_h3_video_vae_fp16.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "加载VAE"
+    }
+  },
+  "227": {
+    "inputs": {
+      "clip_name": "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
+      "type": "minimax",
+      "device": "default"
+    },
+    "class_type": "CLIPLoader",
+    "_meta": {
+      "title": "加载CLIP"
+    }
+  },
+  "228": {
+    "inputs": {
+      "noise_seed": 1070487209935329
+    },
+    "class_type": "RandomNoise",
+    "_meta": {
+      "title": "随机噪波"
+    }
+  },
+  "231": {
+    "inputs": {
+      "sampler_name": "res_multistep"
+    },
+    "class_type": "KSamplerSelect",
+    "_meta": {
+      "title": "K采样器选择"
+    }
+  },
+  "232": {
+    "inputs": {
+      "scheduler": "simple",
+      "steps": [
+        "251",
+        0
+      ],
+      "denoise": 1,
+      "model": [
+        "248",
+        0
+      ]
+    },
+    "class_type": "BasicScheduler",
+    "_meta": {
+      "title": "基本调度器"
+    }
+  },
+  "234": {
+    "inputs": {
+      "image": "reference_2.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "加载图像"
+    }
+  },
+  "238": {
+    "inputs": {
+      "unet_name": "minimax_h3_ref2va_pruned_int8_convrot.safetensors",
+      "weight_dtype": "default"
+    },
+    "class_type": "UNETLoader",
+    "_meta": {
+      "title": "UNet加载器"
+    }
+  },
+  "239": {
+    "inputs": {
+      "image": "reference_3.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "加载图像"
+    }
+  },
+  "240": {
+    "inputs": {
+      "aspect_ratio": "16:9 (Widescreen)",
+      "megapixels": 0.4,
+      "multiple": 32
+    },
+    "class_type": "ResolutionSelector",
+    "_meta": {
+      "title": "Resolution Selector (Size)"
+    }
+  },
+  "242": {
+    "inputs": {
+      "image": "reference_1.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "加载图像"
+    }
+  },
+  "245": {
+    "inputs": {
+      "prompt": "subject_definitions:\n<Subject 1> 第一张参考图中的主体与必须保留的外观。\n<Subject 2> 第二张参考图中的主体与必须保留的外观。\n<Subject 3> 第三张参考图中的场景或道具。\n\nsummary:\n描述一个连续镜头中的具体动作和最终状态。\n\nretention_analysis:\n列出人物身份、服装、场景、光线、机位与画幅中必须保持不变的元素。\n\ndetailed_description:\n描述动作先后顺序、速度、互动及镜头运动；动作变化应自然连续。",
+      "width": [
+        "240",
+        0
+      ],
+      "height": [
+        "240",
+        1
+      ],
+      "length": 124,
+      "ref_image_size": "match",
+      "clip": [
+        "227",
+        0
+      ],
+      "vae": [
+        "226",
+        0
+      ],
+      "ref_images.ref_image_0": [
+        "242",
+        0
+      ],
+      "ref_images.ref_image_1": [
+        "234",
+        0
+      ],
+      "ref_images.ref_image_2": [
+        "239",
+        0
+      ]
+    },
+    "class_type": "MiniMaxH3ReferenceToVideo",
+    "_meta": {
+      "title": "MiniMax H3 参考转视频"
+    }
+  },
+  "246": {
+    "class_type": "LoraLoaderModelOnly",
+    "inputs": {
+      "model": [
+        "238",
+        0
+      ],
+      "lora_name": "minimax_h3_ref2v_turbo_4step_v0.1_comfyui_bf16.safetensors",
+      "strength_model": 1
+    },
+    "_meta": {
+      "title": "R2V Turbo 4-step LoRA"
+    }
+  },
+  "247": {
+    "class_type": "PrimitiveBoolean",
+    "inputs": {
+      "value": true
+    },
+    "_meta": {
+      "title": "Turbo 开关"
+    }
+  },
+  "248": {
+    "class_type": "ComfySwitchNode",
+    "inputs": {
+      "switch": [
+        "247",
+        0
+      ],
+      "on_false": [
+        "238",
+        0
+      ],
+      "on_true": [
+        "246",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "选择基础模型或 Turbo 模型"
+    }
+  },
+  "249": {
+    "class_type": "PrimitiveInt",
+    "inputs": {
+      "value": 20
+    },
+    "_meta": {
+      "title": "基础采样步数"
+    }
+  },
+  "250": {
+    "class_type": "PrimitiveInt",
+    "inputs": {
+      "value": 4
+    },
+    "_meta": {
+      "title": "Turbo 采样步数"
+    }
+  },
+  "251": {
+    "class_type": "ComfySwitchNode",
+    "inputs": {
+      "switch": [
+        "247",
+        0
+      ],
+      "on_false": [
+        "249",
+        0
+      ],
+      "on_true": [
+        "250",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "同步切换采样步数"
+    }
+  },
+  "900": {
+    "inputs": {
+      "model": [
+        "248",
+        0
+      ],
+      "sage_attention": "auto",
+      "allow_compile": false
+    },
+    "class_type": "PathchSageAttentionKJ",
+    "_meta": {
+      "title": "Patch H3 attention (SageAttention auto)"
+    }
+  }
+}

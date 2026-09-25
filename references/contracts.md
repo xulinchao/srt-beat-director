@@ -163,7 +163,7 @@ python scripts/validate_references.py \
 允许值：
 
 - `a_scene_mode`：`fixed-character-micro-scene`、`full-ai-scene`；
-- `primary_timeline`：`chatcut`、`hyperframes`；用户指定 ChatCut 时不得因为部分 B-roll 使用 HyperFrames 而改写此字段；
+- `primary_timeline`：`chatcut`、`hyperframes`；完整视频默认 `chatcut`。用户明确选择独立 HyperFrames 成片，或在 ChatCut 不可用时已接受替代路径，才使用 `hyperframes`；单镜工具选择不能改变此字段；
 - `review_mode`：`manual`、`continuous`。`continuous` 只在用户明确要求自检后继续时使用，不等于预先批准计费、发布、账户或系统权限；
 - `review_source`：通过门控时记录 `user` 或 `agent-qa-under-user-authorization`。后者只允许在 `review_mode=continuous` 时使用；不得把代理自检记录成用户确认；
 - `chatcut`：仅在 ChatCut 路径使用。`project_id`、`timeline_id` 必须来自实际工具读取，不能凭名称猜测；
@@ -207,7 +207,7 @@ python scripts/validate_references.py \
 |---|---|---|---|---|---|---|
 ```
 
-其中“画面类型”使用用户可读的五类名称：`人物画面`、`场景画面`、`真实素材`、`信息图形`、`文字动效`；A/B 职责、素材子类型、语义结构、工具和风险保留在 JSON 或表格后的补充检查中。表格中的镜头 ID 必须从 `S001` 连续递增，时间必须显示为毫秒，配音文案必须来自 `verbatim_text`，不得改写。表格之后固定输出“需要补充的素材”“需要确认的视觉方向”“制作难度较高的镜头”三个部分；无内容时写“无”。
+其中“画面类型”使用用户可读的五类名称：`人物画面`、`场景画面`、`真实素材`、`信息图形`、`文字动效`；A/B 职责、素材子类型、语义结构、工具和风险保留在 JSON 或表格后的补充检查中。保持七列表格稳定，表格之后增加由 JSON 派生的“逐镜制作路由”表，逐镜列出 A/B 职责、动效方式、主制作工具和工具决策依据/辅助链路；不能只在计划 JSON 中隐藏工具选择。镜头 ID 必须从 `S001` 连续递增，时间必须显示为毫秒，配音文案必须来自 `verbatim_text`，不得改写。路由表之后固定输出“需要补充的素材”“需要确认的视觉方向”“制作难度较高的镜头”三个部分；无内容时写“无”。
 
 ```json
 {
@@ -235,7 +235,8 @@ python scripts/validate_references.py \
         "composition": "",
         "shot_scale": "medium",
         "elements": [],
-        "final_state": ""
+        "final_state": "",
+        "motion_intent": "说明该镜的动效方式、旁白触发点及状态停留/转变；静止镜头说明静止理由"
       },
       "changes": [
         {"at_ms": 0, "event": "主体发生可见变化"}
@@ -266,15 +267,20 @@ python scripts/validate_references.py \
 }
 ```
 
-`screen_role` 只允许 `A` 或 `B`。A 的子类型由项目级主画面模式约束；B 的 `material_type` 使用 `verified-media`、`no-material` 或 `text-only`，`presentation_type` 使用 `verified-media`、`infographic` 或 `text-motion`。旧字段 `screen_subtype` 只保留画面实现类别，不能代替这两个映射字段。`start_ms` 和 `end_ms` 必须来自 SRT 边界。
+`screen_role` 只允许 `A` 或 `B`。A 的子类型由项目级主画面模式约束；B 的 `material_type` 使用 `verified-media`、`no-material` 或 `text-only`，`presentation_type` 使用 `verified-media`、`infographic`、`text-motion` 或 `scene`。生成式解释场景使用 `material_type=no-material`、`presentation_type=scene`、`screen_subtype=scene`，`template_id` 可为 null；生成素材不能标为 verified-media。生成场景保留理解点、语义结构、状态节拍及生成证据，不强制走代码模板研究门。旧字段 `screen_subtype` 只保留画面实现类别，不能代替这两个映射字段。`start_ms` 和 `end_ms` 必须来自 SRT 边界。
 
 `production` 记录计划如何落实，不替代画面语义字段：
 
-- `primary_tool`：`existing-media`、`chatcut-image`、`chatcut-video`、`chatcut-motion-graphics`、`hyperframes`、`remotion` 或具体的其他可用工具；
+逐镜制作路由表按 JSON 核对职责、动效方式和主工具。缺少 `motion_intent` 且没有 `static_reason`，或没有 `primary_tool` 时，渲染出的占位说明不能通过 Markdown 校验。旧计划按需补齐真实设计意图并重生视图，不改历史批准或伪造生成记录。
+
+- `primary_tool`：该镜头最终视觉资产的主制作工具。允许值包括 `existing-media`、`gpt-image2`、`chatcut-image`、`chatcut-video`、`chatcut-motion-graphics`、`hyperframes`、`remotion`、`comfyui-minimax-h3-fl2v`、`comfyui-minimax-h3-i2v`、`comfyui-minimax-h3-r2v`、`comfyui-minimax-h3-multi-reference`、`comfyui-qwen21-t2i`、`comfyui-qwen21-edit`、`comfyui-qwen21-multi2`、`comfyui-qwen21-multi4`、`comfyui-qwen21-multi6`、`comfyui-qwen-edit-2509`、`comfyui-qwen-edit-2509-faceswap`、`comfyui-qwen-edit-masked`、`comfyui-qwen-edit-multi`、`comfyui-qwen-edit-multi-hq`、`comfyui-z-image-base`、`comfyui-z-image-turbo`、`comfyui-crop-image` 或具体的其他可用工具；
 - `fallback_tools`：按失败后的真实尝试顺序列出，不能把无关静态图作为动态镜头的默认回退；
 - `asset_status`：`available`、`to-generate`、`in-progress`、`ready`、`failed`、`gap`；
 - `asset_gap`：没有缺口时为 `null`，有缺口时写清缺少什么、为什么无法继续该镜头和是否影响全片导出。
-- 当前标准流程中，`no-material + infographic` B-roll 的 `primary_tool` 使用 `hyperframes` 或 `remotion`；新制作默认 HyperFrames，合格成熟效果可原生复用。使用这两个框架的 B-roll 都必须填写 `production.runtime_decision`，字段和决策规则以 [制作工具决策](broll-runtime-selection.md) 为准。ChatCut 统一管理渲染结果、组装时间线与导出；不能因镜头框架选择而更换主时间线。
+- `video_generation`：ComfyUI 视频镜头的 workflow、首帧、尾帧（fl2v 必填）、运动提示词、输出规格、任务 ID、输出路径和实际帧证据；字段契约见 [comfyui-video-production.md](comfyui-video-production.md)。
+- `image_generation`：ComfyUI 本地图片镜头的 workflow、输入图或 mask、提示词、seed、输出路径和结果证据；字段契约见 [comfyui-image-production.md](comfyui-image-production.md)。
+- 新制计划的每镜都在 `visual_design.motion_intent` 说明运动方式（定格状态序列、生成式连续动作、程序化信息动效或有理由的静止）、旁白触发点及停留/转变；定格动画写明状态图和跳变节奏。`production.primary_tool` 必须逐镜明确，七列表格后的路由表从该字段派生。H3 生成的视频镜头沿用已确定的 `screen_role`，A/B 均可使用；其首尾帧、workflow、运动提示、任务与成片路径写入 `production.video_generation`；其他工具链只作为该镜生成素材或渲染的实现步骤，不能因此改变 ChatCut 主时间线。
+- 完整新制视频的 `primary_timeline` 默认 `chatcut`，例外条件见配置章节。`no-material + infographic` B-roll 可按逐镜计划使用 `hyperframes`、`remotion`、`chatcut-motion-graphics` 或合适的 H3 视频生成工具；HyperFrames/Remotion 的代码动效新制默认 HyperFrames，成熟模板可原生复用。A/B 两类镜头使用这两种代码框架时都必须填写 `production.runtime_decision`，字段和决策规则以 [制作工具决策](broll-runtime-selection.md) 为准。无论单镜工具如何选择，ChatCut 统一管理素材、字幕、声音、组装主时间线与导出。
 
 连续三镜以上同一 `screen_role` 时，在计划根节点增加 `roll_run_exceptions`，逐段记录 `start_shot_id`、`end_shot_id`、`screen_role` 与非空 `reason`。理由必须说明为什么语义不可拆，以及连续镜头如何改变视角或信息结构；不能只写“节奏需要”。
 
@@ -298,7 +304,7 @@ python scripts/validate_references.py \
 
 ## 6. 模板索引
 
-新增验证模板应同时保存 `source_file`、短 preview、`element_relation`、`text_capacity`（中文每行字数/行数/最小字号）、`animation_phases`、`replaceable_fields`、许可证与实际渲染/seek 验证证据 `validation_evidence`。后者是项目相对文件路径，报告记录验证画幅、字体、渲染哈希及测试结果。目录存在或外部仓库登记不代表通过；改文案仍需容量与阅读验收。新条目写 `metadata_version="1.0"`，旧条目只保留兼容提醒，逐项补证后才升级。
+新增验证模板应同时保存 `source_file`、短 preview、`element_relation`、`text_capacity`（中文每行字数/行数/最小字号及实际 `font_path`）、`animation_phases`、`replaceable_fields`、许可证与实际渲染/seek 验证证据 `validation_evidence`。后者是项目相对 JSON 文件路径，报告绑定源码、预览、字体及审阅证据的哈希，格式见 [模板沉淀流程](template-library.md)。目录存在或外部仓库登记不代表通过；改文案仍需容量与阅读验收。新条目写 `metadata_version="1.0"`，旧条目只保留兼容提醒，逐项补证后才升级。选择器 CLI 会先检查索引及认证证据，失效证据不能直接进入选型。
 
 每个模板至少记录：
 
@@ -378,7 +384,7 @@ ChatCut 路径的 manifest 还要记录项目 ID、成片时间线 ID、导出�
 }
 ```
 
-`timeline_at_ms` 与计划 `at_ms` 的误差不得超过一帧。`evidence.artifact` 和 `artifact_time_ms` 必须与逐镜提示词实例中的同序节拍一致。ChatCut 路径的每个节拍至少包含一个真实 `item_id` 与 `asset_id`；本地文件存在但没有进入成片时间线不算 `covered`。
+`timeline_at_ms` 与计划 `at_ms` 的误差不得超过 `1000/fps` 毫秒，不使用成片总时长的 50ms 下限。`timeline_range_frames` 和素材实例 `range_frames` 均为零起点、左闭右开的整数帧区间。边界按 `floor(ms*fps/1000+0.5)` 换算：首镜从第 0 帧开始，镜头保持到下一镜语义起点，末镜到实际解码总帧数，以落实空隙保持策略。每个实例范围须在当前镜头范围内并覆盖该 beat 的实际时间点；镜头级范围记录完整画面，实例级范围记录本节拍真正使用的资产，不能填计划范围冒充实测。`evidence.artifact` 和 `artifact_time_ms` 必须与逐镜提示词实例中的同序节拍一致。ChatCut 路径的每个节拍至少包含一个真实 `item_id` 与 `asset_id`；本地文件存在但没有进入成片时间线不算 `covered`。
 
 ## 8. 生产提示词实例
 
@@ -484,3 +490,31 @@ python scripts/validate_delivery.py \
 ```
 
 `--mode review` 验证已经导出、可交给用户审片的技术闭环，允许 `status.final=rendered-pending-user-review`；用户或获授权的连续执行审核真正批准后，再使用 `--mode final`，此时必须有与成片哈希一致的 `approvals.final`。技术通过不能冒充用户批准。
+
+## 9. 样片依赖与实际媒体证据
+
+`approvals.sample` 在原有 artifact、sha256、approved_at、review_source 之外增加：
+
+```json
+{"dependencies": {"path": "preview/sample-dependencies-v1.json", "sha256": "实际快照哈希"}}
+```
+
+用 `scripts/sample_dependencies.py` 生成快照，随后按真实 QA 结果批准；生成快照本身不批准样片。快照绑定样片路径与哈希，并保存 `dependencies.settings`、`shot_ids`、`files[{path,sha256}]`。依赖包括原始 SRT/音频、完整计划、视觉规范、候选审阅、存在的人物规范与参考索引、DESIGN 及账号规范/字体/样张，以及样片区间（含空隙保持）对应镜头的提示词和输出资产。配置只绑定输入、规格、样片区间、时间线策略、字幕区、主模式和主时间线，避免把审批本身纳入哈希形成循环。
+
+当前对计划采用全文件哈希，属于保守失效：仅回填制作状态也会要求复核快照，但不要求重新生成未变化资产。后续若引入语义投影哈希须显式版本化，不能临时忽略字段。状态校验只报告依赖过期，不自动改审批或旧快照。新旧项目已批准样片均须满足此项；旧样片需真实复核后补证。
+
+`qa-report.json` 增加：
+
+```json
+{"frame_scan": {"path": "reports/frame-scan-v1.json", "sha256": "复核完成后的报告哈希"}}
+```
+
+`scripts/scan_video.py` 生成扫描 JSON：`schema_version="1.0"`、`artifact_path`、`artifact_sha256`、`scan_complete`、`fps`、`decoded_frames`、`media`、`detector`、`candidates`。每个候选包含零起点 `frame`、`time_ms`、原因和测量值。人工或获授权代理查看候选原帧及前后帧后，正常候选填写：
+
+```json
+{"review": {"decision": "accepted", "reason": "具体正常暗场或切镜依据", "evidence": {"path": "reports/frame-review-v1.md", "sha256": "实际证据哈希"}}}
+```
+
+证据文件须指向可核对的原分辨率帧及结论。未处理候选、失效报告、缺失证据均阻止交付。坏帧应修复并对新文件重新扫描，不通过 `accepted` 放行。重新导出和补帧不能沿用旧报告；扫描器拒绝覆盖已有文件。
+
+`validate_delivery.py` 实际运行 ffprobe 解码计数并检查视频流规格、时长、音频流、帧数、扫描绑定、状态依赖和时间线区间。project、QA、manifest 中完整 `final_artifact` 对象必须一致。该检查仍不能证明字幕语义、画面美感、实际音轨内容或听感正确，继续执行 QA 的人工/授权代理检查。
