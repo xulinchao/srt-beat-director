@@ -1,0 +1,46 @@
+{
+  "schema_version": "0.1",
+  "status": "candidate; 30s visual and technical sample verified; final drawing, subjective listening and new-topic generalization pending",
+  "style_id": "dao-paper-grid",
+  "version": "0.1",
+  "references": [
+    {
+      "path": "references/dao-youth-approved.png",
+      "purpose": "character-identity",
+      "authority": "user-selected",
+      "sha256": "a7a095cba0c52838c9ed3313226a7ead0ff337ea2de9b6f85b3b1afa85c19d36"
+    },
+    {
+      "path": "references/paper-style-source.jpg",
+      "purpose": "visual-style",
+      "restrictions": "Line/color/material/layering only; do not inherit first-person camera, drawers, props or hands.",
+      "sha256": "033c5c1674534414e265397ce64511541baf22987fc89ff7c01bd0ce44757ed7"
+    },
+    {
+      "path": "examples/a-workflow.png",
+      "purpose": "generated-example",
+      "restrictions": "Identity and semantic relation evidence; drawing is more detailed than source and is not final style approval.",
+      "sha256": "45f388c3fccada0f076a7373b29a34461c6cb25a9d64124b93d44b7b51d9a4c8"
+    },
+    {
+      "path": "examples/a-thinking.png",
+      "purpose": "generated-example",
+      "restrictions": "New composition evidence; do not reuse pose/round table for every script.",
+      "sha256": "66984b49a78ee87976ae10aab7304292a5e47d687a858e5cc1f95967337c5cdf"
+    },
+    {
+      "path": "examples/b-shared-method.png",
+      "purpose": "visual-style",
+      "restrictions": "Typography/grid/relations only; choose nodes and structure from new script.",
+      "sha256": "6a9bc0fb1d45e7cb823a25e95111615617e52cc78d405f574c3f6d36df204375"
+    }
+  ],
+  "sample_validation": {
+    "workspace": "workspaces/dao-youth-paper-grid-first30-20260927",
+    "artifact": "render/style-sample-first30-v05.mp4",
+    "sha256": "9c7e132a61fe954608b57d2365d1d66155288f1fe5500a59e3dc86aaeb8e7efb",
+    "scope": "visual and technical only",
+    "delivery_mode": "review",
+    "validation_guide": "VALIDATION.md"
+  }
+}

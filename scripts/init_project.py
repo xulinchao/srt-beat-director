@@ -6,8 +6,38 @@ from __future__ import annotations
 import argparse
 import json
 import shutil
+import subprocess
 import sys
 from pathlib import Path
+
+
+def probe_audio_duration_ms(path: Path) -> int | None:
+    """读取音频时长。环境缺少 ffprobe 或读取失败时返回 None，不视为初始化失败。"""
+    ffprobe = shutil.which("ffprobe")
+    if not ffprobe:
+        return None
+    completed = subprocess.run(
+        [
+            ffprobe,
+            "-v",
+            "error",
+            "-show_entries",
+            "format=duration",
+            "-of",
+            "json",
+            str(path),
+        ],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        check=False,
+    )
+    if completed.returncode != 0:
+        return None
+    try:
+        return round(float(json.loads(completed.stdout)["format"]["duration"]) * 1000)
+    except (KeyError, TypeError, ValueError):
+        return None
 
 
 def parse_args() -> argparse.Namespace:
@@ -26,7 +56,12 @@ def parse_args() -> argparse.Namespace:
         choices=["fixed-character-micro-scene", "full-ai-scene"],
         required=True,
     )
-    parser.add_argument("--sample-end-ms", type=int, default=45000)
+    parser.add_argument(
+        "--sample-end-ms",
+        type=int,
+        default=45000,
+        help="样片结束毫秒；能读到音频时长且小于该值时，自动收敛到音频时长",
+    )
     return parser.parse_args()
 
 
@@ -46,6 +81,16 @@ def main() -> int:
     if errors:
         print("\n".join(errors), file=sys.stderr)
         return 2
+
+    audio_duration_ms = probe_audio_duration_ms(args.audio)
+    sample_end_ms = args.sample_end_ms
+    warnings: list[str] = []
+    if audio_duration_ms is not None:
+        if sample_end_ms > audio_duration_ms:
+            warnings.append(f"样片区间 {sample_end_ms}ms 超过音频时长，已收敛到 {audio_duration_ms}ms")
+            sample_end_ms = audio_duration_ms
+    else:
+        warnings.append("未能读取音频时长（ffprobe 不可用或读取失败），样片区间未校验，需人工核对")
 
     input_dir = args.project_dir / "input"
     config_dir = args.project_dir / "config"
@@ -97,7 +142,7 @@ def main() -> int:
             "inter_shot_gap": "hold-previous-shot",
             "tail_gap": "hold-last-shot",
         },
-        "sample": {"start_ms": 0, "end_ms": args.sample_end_ms},
+        "sample": {"start_ms": 0, "end_ms": sample_end_ms},
         "status": {
             "character_identity": "pending" if args.a_scene_mode == "fixed-character-micro-scene" else "not-required",
             "plan": "draft",
@@ -121,7 +166,17 @@ def main() -> int:
     # Certified templates keep their complete, portable bundle under templates/library/.
     if (skill_templates / "library").is_dir():
         shutil.copytree(skill_templates / "library", templates_dir / "library")
-    print(json.dumps({"status": "created", "project_dir": str(args.project_dir)}, ensure_ascii=False))
+    print(
+        json.dumps(
+            {
+                "status": "created",
+                "project_dir": str(args.project_dir),
+                "sample_end_ms": sample_end_ms,
+                "warnings": warnings,
+            },
+            ensure_ascii=False,
+        )
+    )
     return 0
 
 

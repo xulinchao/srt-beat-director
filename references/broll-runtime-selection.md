@@ -6,7 +6,7 @@
 
 先从镜头要表达的变化判断运动方式：自然连续的人物/场景动作、刻意的定格状态切换、需要精确排版的信息动效或有理由的静止。定格动画可用独立状态图与时间线节奏，也可在分镜明确需要首尾帧间生成视频时评估 H3；不能因为画面需要动就默认调用 H3。精确排版的信息动效优先沿用合格模板或程序化制作。选用生成式视频资产时读取 [comfyui-video-production.md](comfyui-video-production.md) 并探测本机服务；有设计好的首帧、尾帧和运动提示词时，优先使用 `comfyui-minimax-h3-fl2v`，缺少尾帧时可评估 `comfyui-minimax-h3-i2v`，参考图驱动的镜头使用 `comfyui-minimax-h3-r2v` 或多图参考变体。MiniMax H3 可生成 A-roll 叙事动作或 B-roll 解释性动画；ComfyUI 只是该镜头的资产生成器，产物经过视频流和视觉检查、登记路径后再导入 ChatCut 主时间线。
 
-图片默认由 GPT Image 2 生成和编辑。不可用时读取 [comfyui-image-production.md](comfyui-image-production.md)，把本地 ComfyUI 记录为 `fallback`，保留不可用原因和 `source_runtime=gpt-image2`；用户明确要求本地出图时按 `user-request` 记录，不伪造工具故障。生成式连续动作的首尾图可继续由 GPT Image 2 制作，但须检查同一人物/场景参考、服装、机位、背景、画幅与动作落点的一致性。使用本地图片工作流时，按实际输入槽选择已收录的 Qwen 2.1 工作流；所有图片先通过尺寸、格式和视觉检查，再进入 ChatCut 或后续视频生成。
+图片生成与编辑执行 [出图停止规则](image-generation-policy.md)：用户指定的内置 GPT 能力不可用时，立即中断整个视频工作流并提示，不自动切换本地工具。用户另行明确更改出图要求后，才可按 `user-request` 记录原话并读取 [本地图片生产](comfyui-image-production.md)。生成式连续动作的首尾图也受此约束，并须检查同一人物/场景参考、服装、机位、背景、画幅与动作落点的一致性。所有图片先通过尺寸、格式和视觉检查，再进入 ChatCut 或后续视频生成。
 
 ## 先筛选效果，再选择工具
 
@@ -57,7 +57,7 @@ HyperFrames / Remotion 制作的镜头在 `production` 内记录 `runtime_decisi
 - `native-reuse` 的 `source_runtime` 必须等于 `primary_tool`，`source_ref` 必须等于本镜 `template_id`，并有选型或研究证据。
 - `port` 的源与目标运行框架必须不同，`source_ref` 绑定本镜 `template_id`；`alternative_reason` 说明为什么原生制作不适合，并保存成本或能力证据。
 - `user-request` 附 `user_request`，保留明确指定工具的原话；`capability-exception` 用于没有原生候选但有实际工具能力理由的非默认制作，两者均保留依据。
-- `fallback` 用于外部图片工具不可用时切换本地 ComfyUI，必须填写 `source_runtime`、`reason` 和 `alternative_reason`，并保留环境探测证据。
+- `fallback` 仅用于允许回退的非出图制作路径；图片生成不可因工具不可用而回退，本地生成只允许用户另行明确指定的 `user-request`。普通裁切不属于图片生成，但同样不能绕过已触发的全局暂停。
 - `evidence` 是现存的项目相对文件路径数组，指向候选检查、运行诊断或用户约束记录。原始截图、预览、源码和检查结果由这些文件定位；不能只写仓库首页。除 `new-default` 外均必填。
 - 非默认制作与移植填写 `alternative_reason`，说明没有采用另一条路径的具体原因。
 - 当前是代码效果重制时才使用 `hyperframes` / `remotion`；直接使用已验证成片素材仍使用 `existing-media`，不为登记工具而重渲染。

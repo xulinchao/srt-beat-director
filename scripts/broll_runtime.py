@@ -39,6 +39,22 @@ def template_status(template: dict) -> str:
 def validate_runtime_decision(shot: dict, project_dir: Path, template_index: dict | None = None) -> list[str]:
     production = shot.get("production") or {}
     runtime = production.get("primary_tool")
+    # Plan checks cannot probe the live image service. They can prevent a
+    # failed built-in image call from silently becoming a different provider.
+    image_generators = (IMAGE_RUNTIMES - {"comfyui-crop-image"}) | {"chatcut-image"}
+    builtin_images = {"gpt-image2", "image_gen"}
+    fallbacks = production.get("fallback_tools") or []
+    policy_errors = []
+    if isinstance(fallbacks, list) and any(tool in image_generators for tool in fallbacks if isinstance(tool, str)):
+        policy_errors.append(f"{shot.get('id')} 不允许自动回退出图工具；内置出图不可用时必须中断整个视频工作流")
+    if runtime in builtin_images | image_generators and fallbacks:
+        policy_errors.append(f"{shot.get('id')} 图片生成路由的 fallback_tools 必须为空，失败后停止并提示")
+    if runtime in image_generators:
+        decision = production.get("runtime_decision") or {}
+        if decision.get("mode") != "user-request" or not str(decision.get("user_request") or "").strip():
+            policy_errors.append(f"{shot.get('id')} 非内置出图必须记录用户另行更改要求的 user-request 和 user_request 原话；不可用时先中断整个视频工作流")
+    if policy_errors:
+        return policy_errors
     if runtime in VIDEO_RUNTIMES:
         decision = production.get("runtime_decision") or {}
         errors = []
@@ -63,8 +79,8 @@ def validate_runtime_decision(shot: dict, project_dir: Path, template_index: dic
     if runtime in IMAGE_RUNTIMES:
         decision = production.get("runtime_decision") or {}
         errors = []
-        if decision.get("mode") not in {"user-request", "capability-exception", "fallback"}:
-            errors.append(f"{shot.get('id')} 本地图片生成必须记录 user-request、fallback 或 capability-exception")
+        if runtime == "comfyui-crop-image" and decision.get("mode") not in {"user-request", "capability-exception"}:
+            errors.append(f"{shot.get('id')} 普通裁切必须记录 user-request 或 capability-exception")
         if not str(decision.get("reason") or "").strip():
             errors.append(f"{shot.get('id')} 本地图片生成缺少 runtime_decision.reason")
         generation = production.get("image_generation") or {}
@@ -72,8 +88,6 @@ def validate_runtime_decision(shot: dict, project_dir: Path, template_index: dic
             errors.append(f"{shot.get('id')} image_generation 缺少 workflow")
         if runtime != "comfyui-crop-image" and not str(generation.get("prompt") or "").strip():
             errors.append(f"{shot.get('id')} image_generation 缺少 prompt")
-        if decision.get("mode") == "fallback" and decision.get("source_runtime") != "gpt-image2":
-            errors.append(f"{shot.get('id')} fallback 必须声明 source_runtime=gpt-image2")
         return errors
     if runtime not in RUNTIMES:
         return []

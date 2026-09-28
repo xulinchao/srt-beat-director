@@ -1,0 +1,161 @@
+{
+  "source_video": {
+    "name": "2026-08-07-vibecoding大赏｜如何用Codex自动剪辑一条视频 #vibecoding大赏  #ai新星.mp4",
+    "sha256": "badd4ecc43b8e9dba3b1652891a583973b096b9285beb8f97b5feb5ab19f6a3c",
+    "duration_seconds": 240.73333333333332
+  },
+  "coverage": {
+    "new_frame_count": 148,
+    "uniform_interval_seconds": 2,
+    "temporal_groups": {
+      "concepts": [
+        32,
+        34,
+        36,
+        38,
+        40,
+        42,
+        44,
+        46,
+        48
+      ],
+      "character-and-media": [
+        54,
+        56,
+        58,
+        60,
+        63,
+        65,
+        67,
+        69,
+        71
+      ],
+      "reusable-library": [
+        81,
+        83,
+        85,
+        87,
+        89,
+        91,
+        93,
+        95,
+        97
+      ],
+      "voice-and-evidence": [
+        104,
+        106,
+        108,
+        110,
+        114,
+        116,
+        118,
+        120,
+        122
+      ],
+      "voice-options": [
+        124,
+        126,
+        128,
+        130,
+        134,
+        136,
+        138,
+        140,
+        142
+      ],
+      "sound-and-arrangement": [
+        145,
+        147,
+        149,
+        151,
+        153,
+        157,
+        159,
+        161,
+        163
+      ],
+      "rhythm": [
+        166,
+        168,
+        170,
+        172,
+        174,
+        180,
+        183,
+        186,
+        189
+      ],
+      "style-and-layout": [
+        194,
+        198,
+        202,
+        204,
+        206,
+        210,
+        215,
+        220,
+        224
+      ],
+      "wrap-up": [
+        226,
+        228,
+        230,
+        232,
+        234,
+        236,
+        238,
+        239,
+        240
+      ]
+    },
+    "inspection": "All 9 included temporal contact sheets inspected; prior 5-second overview also inspected. This is sampling, not every-frame motion reconstruction."
+  },
+  "files": [
+    {
+      "path": "evidence/sequence-character-and-media.jpg",
+      "sha256": "3d16f62f46e0590b691da39ee8a1f6d9947b9335aa8c5c6666587ac6ecd5b354",
+      "bytes": 503023
+    },
+    {
+      "path": "evidence/sequence-concepts.jpg",
+      "sha256": "bb1e1bd70a6c8d4ddd29c2d7fd9eee87c13524b3c90e1bdf2e40482c2952fcc2",
+      "bytes": 441684
+    },
+    {
+      "path": "evidence/sequence-reusable-library.jpg",
+      "sha256": "98d10452340601ae275a4ab5fc68512b4db0b431fc93336229c2f6c6f4b97ab5",
+      "bytes": 444061
+    },
+    {
+      "path": "evidence/sequence-rhythm.jpg",
+      "sha256": "ea617cd7968057dab80d2189e2276d4b8db492db971e73ce2bfc543dd2b4b417",
+      "bytes": 365705
+    },
+    {
+      "path": "evidence/sequence-sound-and-arrangement.jpg",
+      "sha256": "09c965259ae40f01dc0f6cbc39abb71fdf796617f051f438f6085a0d7f7603f1",
+      "bytes": 474610
+    },
+    {
+      "path": "evidence/sequence-style-and-layout.jpg",
+      "sha256": "0f0b89619c243ac02a703ef2eeda575664ed8f50d602520dd85be7117aa75f93",
+      "bytes": 470654
+    },
+    {
+      "path": "evidence/sequence-voice-and-evidence.jpg",
+      "sha256": "7ea19307f8ee680f6ce1a80f95a204316fbf334d03857999c0ac2ced25b141b9",
+      "bytes": 498736
+    },
+    {
+      "path": "evidence/sequence-voice-options.jpg",
+      "sha256": "12dff0b48e9950ceac7c0b26f5aaa805a9b2a66c3a489c540dde038e1a603dda",
+      "bytes": 478817
+    },
+    {
+      "path": "evidence/sequence-wrap-up.jpg",
+      "sha256": "4d6b2673bf3bb38419afb444986cebee80a7a3c3a42574388df388706d03dbf5",
+      "bytes": 428472
+    }
+  ],
+  "raw_frame_archive": "I:\\Project\\srt-beat-director\\research\\reference-analysis\\codex-auto-edit-review-20260927\\full-style-coverage"
+}

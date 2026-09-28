@@ -24,7 +24,7 @@ python scripts/inspect_comfyui.py --url http://127.0.0.1:8188 --out-dir <project
 
 选用 H3 且设计了准确首尾状态时，`fl2v` 优先，因为 `MiniMaxH3ImageToVideo` 同时暴露 `first_frame`、`last_frame` 和 `prompt`。`i2v` 没有 `last_frame`，不能承担需要状态准确落点的镜头。`r2v` 与多图参考工作流适合参考一致性，不等于首尾帧约束。这里的优先级只在已选 H3 的镜头内生效；不把所有定格动画或信息动效自动改成生成式视频。
 
-这五个文件是供 `scripts/run_comfyui_workflow.py` 提交的 **API 格式**工作流，属于 Skill 源文件，不复制到每个视频任务。前三个根据本机保存的官方导出请求整理，三参考图版根据用户提供的原件整理；Turbo 开关已打开，模型和采样步数由同一个开关同时切换。输出为 24 fps H.264 MP4，移除了生成音频的解码与封装。正式 FL2V 默认原生版 1344×768、124 帧；其他基础版本约 0.4 MP。动作预览按需执行，不要求正式镜头重复生成。`fl2v` 的首尾帧可由默认 GPT Image 2 制作；优先从同一已核实参考生成首帧，再编辑尾帧。提交前核对人物身份、服装、道具、背景、机位、画幅和动作方向，提示词写清具体动作、固定元素与最终落点。不因选择 H3 而强制改用本地图片工作流。
+这五个文件是供 `scripts/run_comfyui_workflow.py` 提交的 **API 格式**工作流，属于 Skill 源文件，不复制到每个视频任务。前三个根据本机保存的官方导出请求整理，三参考图版根据用户提供的原件整理；Turbo 开关已打开，模型和采样步数由同一个开关同时切换。输出为 24 fps H.264 MP4，移除了生成音频的解码与封装。正式 FL2V 默认原生版 1344×768、124 帧；其他基础版本约 0.4 MP。动作预览按需执行，不要求正式镜头重复生成。`fl2v` 的首尾帧须遵循 [内置出图停止规则](image-generation-policy.md)，指定能力不可用时停止整个工作流；优先从同一已核实参考生成首帧，再编辑尾帧。提交前核对人物身份、服装、道具、背景、机位、画幅和动作方向，提示词写清具体动作、固定元素与最终落点。不因选择 H3 而强制改用本地图片工作流。
 
 正式 FL2V 使用 `minimax_h3_fl2v_turbo_native_api.json`：1344×768、Turbo 8 步、24 fps，无音轨；`VAEDecode → CreateVideo → SaveVideo`，没有超分、latent 放大、二次采样或解码后的重缩放。停用工作流保留为 `.json.removed` 备份，不可提交。
 
@@ -41,7 +41,7 @@ Sage Attention 是 Turbo 之外的注意力加速。此前误用 `standalone-env
 ```json
 {
   "primary_tool": "comfyui-minimax-h3-fl2v",
-  "fallback_tools": ["existing-media", "chatcut-image"],
+  "fallback_tools": ["existing-media"],
   "asset_status": "to-generate",
   "video_generation": {
     "workflow": "workflows/minimax_h3_fl2v_turbo_native_api.json",
@@ -84,7 +84,7 @@ python scripts/run_comfyui_workflow.py --workflow workflows/minimax_h3_fl2v_turb
 
 生成后先核对首尾状态是否与输入对应，再检查中段的人物身份漂移、道具或背景变形、动作断裂、重复帧和意外闪变；符合设计的片段才登记为可用资产。定格动画按计划的停留时长、跳变时点与旁白节拍检查，不用连续动作的流畅度标准否定刻意跳变。最终导出仍按 [QA](qa.md) 全片扫描和逐镜复核。
 
-失败时保留错误记录和 workflow 快照。只有镜头记录声明了回退工具，才能回退到已有视频或静态图。
+视频生成失败时保留错误记录和 workflow 快照。只有镜头记录声明了回退工具，才能回退到已有视频或静态图；出图失败则按全局停止门处理，不适用此回退。
 
 
 ## 设计图参考动效与同步音效

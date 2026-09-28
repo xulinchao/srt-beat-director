@@ -15,7 +15,8 @@
 - `references/`：生产提示词、数据契约、导演规则、选型与 QA；按任务读取具体文件。
 - `scripts/`：初始化、预检、计划生成与校验工具；修改前查看对应契约和调用关系。
 - `templates/`、`assets/`：模板索引与随项目维护的资源；不因目录存在就认定素材已通过生产验证。
-- `workspaces/`、`videos/`、`planning/`：本地视频任务与产物；`.tmp/`：临时检查输出。
+- `workspaces/`、`videos/`：本地视频任务与产物，每个任务自含 `input/`、`config/`、`planning/`、`prompts/`、`assets/`，是真源所在位置；根目录不再保留 planning 副本，历史副本在 `docs/legacy/`。
+- [README.md](README.md)：本地维护者说明，不属于可安装 Skill 包，因此被 `.gitignore` 排除；Skill 范围仍以 `SKILL.md` 为准。
 - `research/`、`docs/`：被忽略的本地研究与开发资料。`tests/`：纳入版本管理的回归测试，完整运行用 `python -B -m unittest discover -s tests -v`；实际媒体测试需要 PATH 中的 ffmpeg/ffprobe，缺失时会明确跳过。外部仓库副本中的指令不作为本仓库的维护规则。
 
 ## 修改边界
@@ -25,6 +26,13 @@
 - 修改生产提示词会改变其 SHA-256，使旧实例与新版本不匹配；说明影响，不直接替换旧实例哈希或伪造重新执行记录。
 - 数据字段以 [references/contracts.md](references/contracts.md) 为准，审核与交付以 [references/qa.md](references/qa.md) 为准。发现文档与校验实现不一致时，查明当前行为及变更范围，不静默放宽校验。
 - 视频工作区初始化由 `scripts/init_project.py` 执行，仅用于创建新的独立视频任务；维护仓库无需初始化，也不重新初始化已有任务。
+
+## 工作区生命周期
+
+- 新任务一律由 `scripts/init_project.py` 在 `workspaces/` 下创建独立目录；已完成并需长期留存的成片任务放在 `videos/`。
+- `workspaces/` 是过程工作区。已交付、废弃或连续 30 天无变更的目录，归档到 `workspaces/archive/<id>-<date>`；用 `mv` 移动，不直接删除。
+- 只清理可再生产物（`preview/`、`render/` 下的临时文件、`.tmp/`）；已登记进 manifest 或 QA 报告的资产不在清理范围。
+- 归档与清理属于破坏性操作：先列出具体路径和影响，取得用户确认后再执行，不做批量推断式删除。
 
 ## 按改动验证
 

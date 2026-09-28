@@ -1,10 +1,10 @@
 # ComfyUI 本地图片资产生产
 
-图片默认使用 GPT Image 2 生成和编辑。当它不可用、限流或用户明确要求本地生成时，ComfyUI 可以承担图片资产生产；选用 H3 连续动作本身不改变默认出图工具。ComfyUI 只替代图片生成/编辑器，ChatCut 仍负责主时间线、字幕、旁白、声音和导出；生成结果必须先落到项目资产目录并登记来源。
+本文件仅在用户另行明确更改内置出图要求、指定本地生成时使用。内置工具不可用或限流时，执行 [出图停止规则](image-generation-policy.md)，立即停止整个视频工作流，不进入本地后备路线；选用 H3 连续动作也不构成本地出图授权。获授权的 ComfyUI 仅承担图片生成/编辑，ChatCut 仍负责主时间线、字幕、旁白、声音和导出；生成结果必须先落到项目资产目录并登记来源。
 
-## 后备路由
+## 用户指定的本地路由
 
-工具不可用或限流时，先记录实际证据，再把本镜 `production.runtime_decision.mode` 设为 `fallback`，`reason` 写明原因，`source_runtime` 写 `gpt-image2`。用户明确要求本地生成时使用 `user-request` 并记录原话，不编造 GPT Image 2 故障。本地工作流只在环境探测通过、模型与节点可用时进入生产；探测失败时保留缺口，不把未生成的占位图登记为可用资产。需要将图片交给 H3 制作连续动作时，优先从同一参考生成首帧并编辑尾帧，检查身份、服装、道具、背景、机位、画幅和动作落点；不独立随机生成两张相似图后直接提交。
+核实用户已明确更改本次出图要求，把本镜 `production.runtime_decision.mode` 设为 `user-request`，在 `user_request` 记录原话、在 `reason` 写明原因；不能填写 `fallback` 或 `capability-exception` 绕过停止门。本地工作流只在环境探测通过、模型与节点可用时进入生产；探测失败时保留缺口，不把未生成的占位图登记为可用资产。需要将图片交给 H3 制作连续动作时，优先从同一参考生成首帧并编辑尾帧，检查身份、服装、道具、背景、机位、画幅和动作落点；不独立随机生成两张相似图后直接提交。
 
 | 工作流 | 输入 | 适用场景 | runtime |
 |---|---|---|---|
@@ -49,12 +49,12 @@ python scripts/run_comfyui_image_workflow.py \
 ```json
 {
   "primary_tool": "comfyui-qwen21-edit",
-  "fallback_tools": ["chatcut-image"],
+  "fallback_tools": [],
   "asset_status": "to-generate",
   "runtime_decision": {
-    "mode": "fallback",
-    "source_runtime": "gpt-image2",
-    "reason": "GPT Image 2 当前不可用，改用本地 ComfyUI",
+    "mode": "user-request",
+    "user_request": "本次更改出图要求，改用本地 Qwen Image 2.1 编辑。",
+    "reason": "用户已另行明确指定本次使用本地图片工具",
     "alternative_reason": "本地 Qwen Image 2.1 编辑工作流节点和模型均已通过环境探测",
     "evidence": ["planning/comfyui/environment-report.json"]
   },
@@ -68,7 +68,7 @@ python scripts/run_comfyui_image_workflow.py \
 }
 ```
 
-输出通过尺寸、格式和视觉 QA 后，才把 `asset_status` 改为 `ready`，并记录 ChatCut asset ID。GPT Image 2 恢复可用时，新镜头可回到原工具；已经批准的本地资产不因工具恢复而自动重做。
+输出通过尺寸、格式和视觉 QA 后，才把 `asset_status` 改为 `ready`，并记录 ChatCut asset ID。后续镜头遵循当前有效的出图授权；已经批准的本地资产不因工具恢复而自动重做，历史记录不改写。
 
 
 ## 动效设计图的额外规格

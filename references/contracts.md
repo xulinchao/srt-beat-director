@@ -245,7 +245,7 @@ python scripts/validate_references.py \
         {
           "cue_ids": [1],
           "at_ms": 0,
-          "trigger_text": "逐字旁白短语",
+          "trigger_text": "逐字来自绑定 cue",
           "information_change": "这一短语触发的新信息",
           "state_after": "变化后观众能读到的状态"
         }
@@ -274,7 +274,7 @@ python scripts/validate_references.py \
 逐镜制作路由表按 JSON 核对职责、动效方式和主工具。缺少 `motion_intent` 且没有 `static_reason`，或没有 `primary_tool` 时，渲染出的占位说明不能通过 Markdown 校验。旧计划按需补齐真实设计意图并重生视图，不改历史批准或伪造生成记录。
 
 - `primary_tool`：该镜头最终视觉资产的主制作工具。允许值包括 `existing-media`、`gpt-image2`、`chatcut-image`、`chatcut-video`、`chatcut-motion-graphics`、`hyperframes`、`remotion`、`comfyui-minimax-h3-fl2v`、`comfyui-minimax-h3-i2v`、`comfyui-minimax-h3-r2v`、`comfyui-minimax-h3-multi-reference`、`comfyui-qwen21-t2i`、`comfyui-qwen21-edit`、`comfyui-qwen21-multi2`、`comfyui-qwen21-multi4`、`comfyui-qwen21-multi6`、`comfyui-qwen-edit-2509`、`comfyui-qwen-edit-2509-faceswap`、`comfyui-qwen-edit-masked`、`comfyui-qwen-edit-multi`、`comfyui-qwen-edit-multi-hq`、`comfyui-z-image-base`、`comfyui-z-image-turbo`、`comfyui-crop-image` 或具体的其他可用工具；
-- `fallback_tools`：按失败后的真实尝试顺序列出，不能把无关静态图作为动态镜头的默认回退；
+- `fallback_tools`：仅记录允许回退的制作路径，不能把无关静态图作为动态镜头的默认回退；内置出图工具不可用时必须全局停止，图片路由使用空数组，不登记替代出图工具。不限定 GPT 的具体模型版本，执行前按 [出图停止规则](image-generation-policy.md) 核实内置出图能力；
 - `asset_status`：`available`、`to-generate`、`in-progress`、`ready`、`failed`、`gap`；
 - `asset_gap`：没有缺口时为 `null`，有缺口时写清缺少什么、为什么无法继续该镜头和是否影响全片导出。
 - `video_generation`：ComfyUI 视频镜头的 workflow、首帧、尾帧（fl2v 必填）、运动提示词、输出规格、任务 ID、输出路径和实际帧证据；字段契约见 [comfyui-video-production.md](comfyui-video-production.md)。
@@ -369,7 +369,7 @@ ChatCut 路径的 manifest 还要记录项目 ID、成片时间线 ID、导出�
   "beats": [
     {
       "at_ms": 0,
-      "trigger_text": "逐字旁白短语",
+      "trigger_text": "逐字来自绑定 cue",
       "timeline_at_ms": 0,
       "status": "covered",
       "evidence": {

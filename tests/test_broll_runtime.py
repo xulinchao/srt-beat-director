@@ -177,12 +177,44 @@ class RuntimeDecisionTests(unittest.TestCase):
     def test_qwen21_keyframe_edit_is_checked_as_local_image_workflow(self):
         self.shot["production"] = {
             "primary_tool": "comfyui-qwen21-edit",
-            "runtime_decision": {"mode": "fallback", "reason": "默认图片工具不可用", "source_runtime": "gpt-image2"},
+            "runtime_decision": {"mode": "user-request", "reason": "用户更改出图要求", "user_request": "本次改用本地 Qwen 编辑。"},
             "image_generation": {"workflow": "workflows/qwen_image_2_1_edit_keyframe_api.json", "prompt": "保持人物，只改变手势"},
         }
         self.assertEqual(validate_runtime_decision(self.shot, self.root), [])
         del self.shot["production"]["image_generation"]["prompt"]
         self.assertTrue(any("缺少 prompt" in error for error in validate_runtime_decision(self.shot, self.root)))
+
+    def test_image_outage_cannot_fallback_or_claim_capability_exception(self):
+        for runtime in ("comfyui-qwen21-edit", "comfyui-z-image-turbo", "chatcut-image"):
+            for mode in ("fallback", "capability-exception", "user-request"):
+                with self.subTest(runtime=runtime, mode=mode):
+                    self.shot["production"] = {
+                        "primary_tool": runtime,
+                        "runtime_decision": {"mode": mode, "reason": "内置工具不可用", "source_runtime": "gpt-image2"},
+                        "image_generation": {"workflow": "local.json", "prompt": "画面"},
+                    }
+                    self.assertTrue(any("中断整个视频工作流" in e for e in validate_runtime_decision(self.shot, self.root)))
+
+    def test_builtin_image_routes_have_no_automatic_fallback(self):
+        for runtime in ("gpt-image2", "image_gen"):
+            self.shot["production"] = {"primary_tool": runtime, "fallback_tools": []}
+            self.assertEqual(validate_runtime_decision(self.shot, self.root), [])
+            for fallback in ("comfyui-qwen21-t2i", "chatcut-image", "existing-media"):
+                with self.subTest(runtime=runtime, fallback=fallback):
+                    self.shot["production"]["fallback_tools"] = [fallback]
+                    self.assertTrue(validate_runtime_decision(self.shot, self.root))
+
+    def test_video_route_cannot_hide_image_fallback(self):
+        self.shot["production"] = {"primary_tool": "chatcut-video", "fallback_tools": ["chatcut-image"]}
+        self.assertTrue(validate_runtime_decision(self.shot, self.root))
+
+    def test_plain_crop_remains_available_without_image_generation(self):
+        self.shot["production"] = {
+            "primary_tool": "comfyui-crop-image",
+            "runtime_decision": {"mode": "capability-exception", "reason": "裁切已有图片"},
+            "image_generation": {"workflow": "crop_image.json"},
+        }
+        self.assertEqual(validate_runtime_decision(self.shot, self.root), [])
 
     def test_plan_cli_accepts_mixed_runtimes_and_rejects_missing_decision(self):
         (self.root / "config").mkdir()
