@@ -37,6 +37,8 @@
 
 ## 5. 阶段命令与能力边界
 
+生产前入口见 [execution-routing.md](execution-routing.md)：`check_workflow.py` 在 `expand`/`candidate` 中调用同一 expand 检查，在交付中复用 delivery 检查。以下专项命令保留用于阶段证据核对与定位失败，无变化时不重复运行。
+
 ```text
 python scripts/validate_sequence_quality.py --project-dir <project> --stage planning --out <project>/planning/sequence-plan-validation.json
 python scripts/validate_sequence_quality.py --project-dir <project> --stage prepared --out <project>/planning/motion-reference-validation.json

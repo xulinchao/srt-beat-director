@@ -1,4 +1,4 @@
 interface:
   display_name: "不露脸知识视频导演"
   short_description: "把 SRT、MP3 或现有 ChatCut 项目制作成画面参与解释的知识视频"
-  default_prompt: "使用 $knowledge-abroll-video，按我的输入、任务范围和已有授权制作知识视频：先确定理解任务，按需选择图解、IP 互动讲解、人物叙事或真实证据，再设计静止、定格或连续动作并逐镜选择工具；沿用当前 DESIGN 和已定规格，无既定规格时默认 16:9、1920x1080、30fps，完整视频在 ChatCut 组装，以实际表达、音画同步和可编辑工程验收。"
+  default_prompt: "使用 $knowledge-abroll-video，按本次范围和已有授权制作或续做知识视频；续做先核对真实状态，按阶段加载指引并在制作前检查，单镜工具服从已选主工程，以带原旁白的连续样片验证动作、布局和解释效果后再扩展。"
