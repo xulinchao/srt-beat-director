@@ -4,7 +4,7 @@
 
 ## 输入与参考
 
-完整生产需要可解析的 SRT 和对应 MP3；继续现有项目时先定位其已保存输入。可选输入包括 IP、三视图、视觉参考、真实截图/录屏、品牌规范、本地模板和输出规格。默认不设计或加入固定 IP 人物；只有用户明确要求设计或使用 IP、且尚未说明 B-roll 用途时，才询问一次该 IP 是否参与 B-roll，并把答复写入单片 DESIGN 的角色参与说明。已有明确答复直接沿用。未要求 IP 时不为填满人物画面而创造跨镜头 IP；普通剧情人物是否出现仍由文案决定。参考用途登记到 `input/references/index.json`，区分 `character-identity`、`visual-style`、`layout-reference`、`motion-reference`、`verified-media`，再运行 `scripts/validate_references.py`。同一参考可登记多个用途，未声明的用途不能自行推断。
+完整生产需要可解析的 SRT 和对应 MP3；继续现有项目时先定位其已保存输入。可选输入包括 IP、三视图、视觉参考、真实截图/录屏、品牌规范、本地模板和输出规格。默认不设计或加入固定 IP 人物；只有用户明确要求设计或使用 IP、且尚未说明 B-roll 用途时，才询问一次该 IP 是否参与 B-roll，并把答复写入单片 DESIGN 的角色参与说明。已有明确答复直接沿用。重新设计或新建同系列任务时先继承已确认的 IP 与讲解需求；不得把“未要求 IP”的默认值覆盖到已有选择上。未要求 IP 时不为填满人物画面而创造跨镜头 IP；普通剧情人物是否出现仍由文案决定。参考用途登记到 `input/references/index.json`，区分 `character-identity`、`visual-style`、`layout-reference`、`motion-reference`、`verified-media`，再运行 `scripts/validate_references.py`。同一参考可登记多个用途，未声明的用途不能自行推断。
 
 从配置、输入和用户要求确定主画面模式（`fixed-character-micro-scene` / `full-ai-scene`）、画幅、分辨率、帧率、平台、人物与风格、真实性限制、字幕安全区、样片区间和输出目录。没有现有规格时，默认横屏 `16:9`、`1920x1080`、`30fps`、约 45 秒代表性样片；用户明确指定或已有项目已确定的规格优先。初始化新任务时，将选定规格显式传入 `init_project.py` 的 `--aspect-ratio`、`--width`、`--height` 和 `--fps`。
 
@@ -16,6 +16,7 @@
 - 字段：[契约](contracts.md) §1–5、§8；新动作/连续镜头门读 §10–11。
 - 设计：[设计真源](design-system.md) 与 [DESIGN 模板](../templates/DESIGN.md)，未定稿时保留草稿。
 - 分镜提示词：[production-prompts.md](production-prompts.md) §1 `visual-plan-v1`；实际代入并保存实例。
+- 所有 B-roll 先读 [表达选型](broll-expression-selection.md) 的“两条创意路径”和“分镜必须说清的内容”；按实际内容选择成熟表达借鉴或内容驱动设计。
 - 逐镜工具：[工具选型](broll-runtime-selection.md)；程序化 B-roll 再读 [表达选型](broll-expression-selection.md)、[语义映射](semantic-template-mapping.md)、[B-roll 生产](broll-production.md) 与生产提示词 §6。
 - 新自制动效按 [连续镜头质量](sequence-quality.md) 查实际演示，覆盖照片动画与 A/B 镜头。无素材信息图完整研究流程另见 [外部研究](broll-external-research.md)。
 - 关键动作的声音需要按 [音效](sound-design.md) 写入计划，BGM 按用户要求。
@@ -44,6 +45,6 @@ python scripts/render_plan_markdown.py --plan <project>/planning/visual-plan.jso
 python scripts/validate_plan_markdown.py --plan <project>/planning/visual-plan.json --markdown <project>/planning/visual-plan.md
 ```
 
-再按数据契约 §8 运行 `validate_prompt_usage.py --stage planning`。计划与可读视图校验通过并按审核模式记录结果后，才能进入视觉基线与生产；在此之前不创建 ChatCut 项目、不导入素材、不生成图片/视频/动画、不导出。仅要求分镜时在此交付，不继续生成资产。
+再按数据契约 §8 运行 `validate_prompt_usage.py --stage planning`。结构校验通过后，仍须按 QA 分镜门审查图片、讲解文字、IP、动作与保持是否明确；存在关键素材、表达或工具未决项时交付“设计提案/草稿”并列出缺口，不按可执行分镜请求批准。适用的参考证据按 sequence-quality 的阶段要求补齐，不把待制作动态样片冒称已通过。完成表达审阅并按审核模式记录结果后，才能进入视觉基线与生产；在此之前不创建 ChatCut 项目、不导入素材、不生成图片/视频/动画、不导出。仅要求分镜时在此交付，不继续生成资产。
 
 进入视觉基线制作前运行 `check_workflow.py --action baseline`；该入口复用计划、可读视图、提示词和状态检查。细则与失败处理见 [执行检查](execution-routing.md)。

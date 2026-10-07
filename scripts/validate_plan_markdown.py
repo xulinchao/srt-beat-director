@@ -9,7 +9,10 @@ import re
 import sys
 from pathlib import Path
 
-from render_plan_markdown import md_cell, motion_intent_text
+from render_plan_markdown import (
+    changes_text, design_text, display_type, md_cell, motion_intent_text,
+    production_route_text, transition_text,
+)
 
 
 TABLE_HEADER = "| 镜头 | 时间 | 配音文案 | 画面类型 | 画面设计 | 动态变化 | 画面衔接 |"
@@ -88,6 +91,14 @@ def validate(plan: dict, markdown: str) -> dict:
                 errors.append(f"{expected_id} 表格时间与 JSON 不一致")
         if values[2] != md_cell(shot.get("verbatim_text") or ""):
             errors.append(f"{expected_id} 配音文案与 JSON 的 verbatim_text 不一致")
+        for column, label, render_cell in (
+            (3, "画面类型", display_type),
+            (4, "画面设计", design_text),
+            (5, "动态变化", changes_text),
+            (6, "画面衔接", transition_text),
+        ):
+            if values[column] != md_cell(render_cell(shot)):
+                errors.append(f"{expected_id} {label}与 JSON 不一致，请重新生成可读视图")
 
     try:
         route_section_index = lines.index("## 逐镜制作路由")
@@ -130,6 +141,8 @@ def validate(plan: dict, markdown: str) -> dict:
             errors.append(f"{expected_id} JSON 缺少主制作工具")
         if values[3] != md_cell(primary_tool):
             errors.append(f"{expected_id} 制作路由工具与 production.primary_tool 不一致")
+        if values[4] != md_cell(production_route_text(shot)):
+            errors.append(f"{expected_id} 制作路由决策依据与 JSON 不一致")
         if not values[2]:
             errors.append(f"{expected_id} 制作路由缺少动效方式")
 

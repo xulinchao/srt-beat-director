@@ -6,9 +6,9 @@
 2. 判断 `screen_role`。讲人、经历、态度和情绪用 A；讲知识增量、证据、关系和步骤用 B。
 3. B-roll 判断 `material_type`：`verified-media`、`no-material` 或 `text-only`。
 4. 判断一个主 `semantic_structure`：`comparison`、`aggregation`、`filtering`、`hierarchy`、`causality`、`replacement`、`expansion`；再用 `semantic_pattern` 描述具体骨架模式。
-5. 按 §6 双层策略选型：快路径先查本地认证模板（`template-index.json`）；本地没有时通过 `config/project.json` 的 `repositories_root` 召回参考仓库候选。新程序化 B-roll 按 [表达选型](broll-expression-selection.md) 提供动作简报，跨语义类别查看实际预览与源码；选择器分数只排浏览顺序，确认来源后才算命中。未确认来源时完成外部研究，再决定慢路径静帧布局。
+5. 创意先按 [表达选型](broll-expression-selection.md) 选择路径；以下只约束程序化实现来源。按生产提示词 §6 先查本地认证模板（`template-index.json`）；本地没有时通过 `config/project.json` 的 `repositories_root` 召回参考仓库候选。新程序化 B-roll 按 [表达选型](broll-expression-selection.md) 提供动作简报，跨语义类别查看实际预览与源码；选择器分数只排浏览顺序，确认来源后才算命中。没有合格现成实现时完成适用研究后自建；内容方案与布局可以此前提出，不必等检索失败。
 6. 选定唯一来源与运动方案后，按复杂度复用布局证据或检查必要关键状态，记录 layout_review；多状态镜头带原旁白动态预览，不以终态截图代替运动验收。当前原生快路径支持 Remotion / HyperFrames；Motion Canvas 候选保留其真实框架身份，须另行完成适配与运行校验，不能标为 HyperFrames。
-7. 只有遍历本地模板与参考仓库仍不合适，才允许有证据的自建，须逐项记录实际检查的候选与拒绝理由；目录为空或拒绝两项不代表完成研究。
+7. 程序化实现只有遍历本地模板与参考仓库仍不合适，才允许有证据的自建，须逐项记录实际检查的候选与拒绝理由；目录为空或拒绝两项不代表完成研究。
 
 ## 七类结构的判定边界
 
@@ -29,7 +29,7 @@
 `presentation_type` 与语义结构是不同维度：
 
 - `character`：人物表达；通常属于 A-roll。
-- `scene`：具体情境或动作；通常属于 A-roll，也可作为有素材 B-roll。
+- `scene`：具体情境或动作；按叙事职责可为 A 或 B，生成式解释场景使用 `no-material`，不能冒充真实证据。
 - `verified-media`：截图、录屏、照片或真实证据。
 - `infographic`：步骤、关系、比较、流程、数据和因果。
 - `text-motion`：引文、关键词、概念替换和结论。

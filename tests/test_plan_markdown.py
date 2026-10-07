@@ -45,6 +45,24 @@ class ProductionRouteMarkdownTests(unittest.TestCase):
         start, end = markdown.index("## 逐镜制作路由"), markdown.index("## 全片检查")
         self.assertEqual(validate(self.plan, markdown[:start] + markdown[end:])["status"], "fail")
 
+    def test_view_cannot_omit_or_replace_explanation_decisions(self):
+        plan = copy.deepcopy(self.plan)
+        shot = plan["shots"][0]
+        shot["visual_design"]["elements"] = ["图片：陶罐", "讲解文字：小罐做头"]
+        shot["visual_design"]["character_role"] = "道童引导观察后让位"
+        shot["changes"][0]["event"] = "两罐合拢，名称保留到镜头结束"
+        shot["transition"] = {"to_next": "保留头部位置进入纹样特写"}
+        shot["production"]["runtime_decision"] = {"reason": "场景运动使用 H3，文字独立合成"}
+        markdown = render(plan)
+        self.assertEqual(validate(plan, markdown)["status"], "pass")
+        for original in (
+            "场景画面", "小罐做头", "道童引导观察后让位",
+            "两罐合拢，名称保留到镜头结束", "保留头部位置进入纹样特写",
+            "场景运动使用 H3，文字独立合成",
+        ):
+            with self.subTest(omitted=original):
+                self.assertEqual(validate(plan, markdown.replace(original, "省略"))["status"], "fail")
+
 
 if __name__ == "__main__":
     unittest.main()

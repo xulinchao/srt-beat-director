@@ -53,9 +53,9 @@ B-roll 遵循与 A-roll 相同的 DESIGN；有素材画面保留原色。角色�
 
 再为这一段确定一个具体的 `visual_structure`。它描述观众实际看到的空间关系和阅读路径，例如文档组装、双栏进度、问题雷达、经历桥、判断天平、学习循环；“卡片”“列表”“深色 UI”过于笼统，不能作为结构名。全片可以统一配色、字体、材质、圆角和标注系统，同一核心图可以随语义递进，不靠机械换字换色替代解释。
 
-B-roll 选型按 [production-prompts.md §6](production-prompts.md) 先复用骨架；无适配来源时完成研究，再先设计关系与状态变化、后定布局。静帧按需核对构图与容量，多状态带原旁白检查运动，记录 layout_review。生成场景按动作、参考素材和工具能力选型，保持同一套旁白节拍与产物验收。工具决策见 [制作工具决策](broll-runtime-selection.md)；深度表达匹配见 [按视觉表达选型](broll-expression-selection.md)。
+B-roll 创意按 [表达选型](broll-expression-selection.md) 选择成熟表达借鉴或内容驱动设计；两者共存，均落实图片、讲解文字、人物职责、变化与阅读保持。程序化实现按 [production-prompts.md §6](production-prompts.md) 核对复用来源，无适配实现时研究后自建；该实现门不限制先设计内容关系。静帧按需核对构图与容量，多状态带原旁白检查运动，记录 layout_review。生成场景按动作、参考素材和工具能力选型，保持同一套旁白节拍与产物验收。工具决策见 [制作工具决策](broll-runtime-selection.md)；深度表达匹配见 [按视觉表达选型](broll-expression-selection.md)。
 
-选型时对照最近三个 B-roll，审查复用的解释收益，不以重复本身否决；详见 SKILL.md「核心制作约束」。复用理由及用途写入 broll_structure_exceptions。
+选型时对照最近三个 B-roll，审查复用的解释收益，不以重复本身否决；详见 SKILL.md「全流程保持的约束」。复用理由及用途写入 broll_structure_exceptions。
 
 标准主语义结构只使用：`comparison`、`aggregation`、`filtering`、`hierarchy`、`causality`、`replacement`、`expansion`。流程、时间线和组成关系写入具体 `semantic_pattern` 或 `secondary_structures`，不新增主结构名称。
 
@@ -65,7 +65,7 @@ B-roll 选型按 [production-prompts.md §6](production-prompts.md) 先复用骨
 - A/B 按语义安排，不固定交替节奏；连续三镜以上沿用既有理由记录与审核；
 - 每个 B-roll 语义段使用与信息关系对应的具体视觉结构；复用是否合理由语义与实际画面判断，不以近三镜重复自动否决；
 - 同类连续时复核视角、阅读路径与动作是否推进理解；递进与比较可保持同一核心图，不机械要求换结构；
-- 长镜头按口播安排有效信息变化，入场、呼吸、背景循环和字幕出现不算有效变化；
-- 样片必须包含 A、B、一次完整切换、人物一致性和典型信息动效；
+- 长镜头按口播安排有效信息变化；新条目、名称和结论的建立可以有效，呼吸、背景循环和逐字字幕不能代替讲解；保留必要阅读时间；
+- 样片覆盖实际主要表达方式、高风险动作与相邻接缝；出现重复人物时检查身份一致，不为凑 A/B 类别添加镜头；
 - 当前批准必须绑定最新真源哈希，旧样片不能证明新视觉系统通过。
 - 技术导出完成不等于最终批准。候选成片必须通过提示词生产证据、时间线节拍覆盖、QA、manifest 和文件哈希的闭环校验，手动审核仍需用户批准。
