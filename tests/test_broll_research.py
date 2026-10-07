@@ -13,6 +13,20 @@ sys.path.insert(0, str(ROOT / "scripts"))
 import select_broll_template  # noqa: E402
 import validate_broll_research  # noqa: E402
 import validate_template_index  # noqa: E402
+from broll_expression import MATCHING_POLICY  # noqa: E402
+
+
+def brief() -> dict:
+    return {
+        "subjects": ["两个并列选项"],
+        "element_relation": "A 与 B 并列",
+        "main_motion": "先建立再高亮",
+        "phase_order": ["建立", "比较", "结论"],
+        "invariants": ["位置保持"],
+        "motion_tags": ["side-by-side-compare"],
+        "search_queries": ["compare two items side by side",
+                           "highlight one after establishing both"],
+    }
 
 
 def mapping() -> dict:
@@ -59,6 +73,7 @@ def mapping() -> dict:
 
 def plan(template_id: str, record: str | None = None) -> dict:
     return {
+        "broll_matching_policy": MATCHING_POLICY,
         "shots": [
             {
                 "id": "S001",
@@ -135,9 +150,13 @@ class ResearchValidationTests(unittest.TestCase):
             (self.repo / "references" / name).write_text("shot card", encoding="utf-8")
         for name in ("a.tsx", "b.tsx"):
             (self.repo / "demos" / name).write_text("export {};", encoding="utf-8")
+        (self.root / "planning" / "preview.png").write_bytes(b"unit fixture preview")
         selector = {
+            "schema_version": "0.2",
             "status": "external-research-required",
             "selection_policy": "single-source-per-shot",
+            "matching_policy": MATCHING_POLICY,
+            "expression_brief": brief(),
             "query": {"semantic_structure": "comparison"},
             "external_candidates": [{"id": "candidate-a"}, {"id": "candidate-b"}],
             "research_record_required_before_implementation": True,
@@ -160,70 +179,23 @@ class ResearchValidationTests(unittest.TestCase):
         self.assertEqual(report["status"], "fail")
         self.assertTrue(any("缺少外部骨架研究记录" in value for value in report["errors"]))
 
-    def test_concrete_external_review_allows_port(self) -> None:
-        record = {
-            "schema_version": "0.1",
-            "shot_id": "S001",
-            "selector_report": "planning/template-selection/S001.json",
-            "source_policy": "single-source",
-            "inspected_candidates": [
-                {
-                    "id": "candidate-a",
-                    "repository": "demo-repo",
-                    "shot_card": "references/a.md",
-                    "implementation_files": ["demos/a.tsx"],
-                    "license": "Apache-2.0",
-                    "fit": "selected",
-                    "assessment": "两项并列结构适配。",
-                    "rejection_reason": None,
-                },
-                {
-                    "id": "candidate-b",
-                    "repository": "demo-repo",
-                    "shot_card": "references/b.md",
-                    "implementation_files": ["demos/b.tsx"],
-                    "license": "Apache-2.0",
-                    "fit": "rejected",
-                    "assessment": "分支关系过强。",
-                    "rejection_reason": "当前镜头不需要汇聚。",
-                },
-            ],
-            "decision": "port-external-skeleton",
-            "selected_candidate": "candidate-a",
-            "implementation_source": {"candidate_id": "candidate-a"},
-            "extracted_skeleton": {
-                "element_relation": "A 与 B 并列",
-                "main_motion": "先建立再高亮",
-                "phase_order": ["建立", "比较", "结论"],
-            },
-            "custom_reason": None,
-            "borrowed_motion_principles": [],
-        }
-        (self.research_dir / "S001.json").write_text(
-            json.dumps(record, ensure_ascii=False), encoding="utf-8"
-        )
-        report = validate_broll_research.validate(
-            plan("external:candidate-a", "planning/broll-research/S001.json"),
-            {"templates": []},
-            mapping(),
-            self.research_dir,
-            self.root / "repositories",
-        )
-        self.assertEqual(report["status"], "pass", report["errors"])
-
     def test_native_reuse_requires_matching_runtime(self) -> None:
         inspected = []
         for candidate in mapping()["structures"][0]["external_candidates"]:
-            inspected.append({
+            item = {
                 "id": candidate["id"], "repository": candidate["repository"],
                 "shot_card": candidate["path"],
                 "implementation_files": [f"demos/{Path(candidate['path']).stem}.tsx"],
                 "license": candidate["license"],
                 "fit": "selected" if candidate["id"] == "candidate-a" else "rejected",
                 "assessment": "已核对双栏预览与源码。", "rejection_reason": "另一效果改造量较大。",
-            })
+            }
+            if item["fit"] == "selected":
+                item["preview_evidence"] = {"status": "inspected", "artifact": "planning/preview.png"}
+            inspected.append(item)
         record = {
             "shot_id": "S001", "selector_report": "planning/template-selection/S001.json",
+            "expression_brief": brief(),
             "source_policy": "single-source", "decision": "reuse-native-source",
             "selected_candidate": "candidate-a", "inspected_candidates": inspected,
             "implementation_source": {"candidate_id": "candidate-a", "runtime": "remotion"},
@@ -237,12 +209,13 @@ class ResearchValidationTests(unittest.TestCase):
         native_plan["shots"][0]["production"]["primary_tool"] = "hyperframes"
         report = validate_broll_research.validate(native_plan, {"templates": []}, mapping(), self.research_dir, self.root / "repositories")
         self.assertEqual(report["status"], "fail")
+        self.assertTrue(any("runtime 必须等于 primary_tool" in value for value in report["errors"]))
 
     def test_custom_build_requires_rejections_and_borrowed_principles(self) -> None:
         record = {
-            "schema_version": "0.1",
             "shot_id": "S001",
             "selector_report": "planning/template-selection/S001.json",
+            "expression_brief": brief(),
             "source_policy": "single-source",
             "inspected_candidates": [
                 {
@@ -259,6 +232,12 @@ class ResearchValidationTests(unittest.TestCase):
             ],
             "decision": "custom-after-external-review",
             "selected_candidate": None,
+            "expanded_search": [
+                {"source": "hyperframes-catalog", "query": "compare two items side by side",
+                 "outcome": "无适配来源", "candidate_ids": []},
+                {"source": "remotion-repository", "query": "highlight one after establishing both",
+                 "outcome": "无适配来源", "candidate_ids": []},
+            ],
             "extracted_skeleton": {
                 "element_relation": "两条路径共享起点",
                 "main_motion": "先分路再分别落定",
@@ -278,6 +257,18 @@ class ResearchValidationTests(unittest.TestCase):
             self.root / "repositories",
         )
         self.assertEqual(report["status"], "pass", report["errors"])
+
+    def test_new_id_with_empty_record_is_blocked(self) -> None:
+        (self.research_dir / "S001.json").write_text("{}", encoding="utf-8")
+        report = validate_broll_research.validate(
+            plan("new:custom", "planning/broll-research/S001.json"),
+            {"templates": []},
+            mapping(),
+            self.research_dir,
+            self.root / "repositories",
+        )
+        self.assertEqual(report["status"], "fail")
+        self.assertTrue(any("缺少有效 decision" in value for value in report["errors"]))
 
 
 class TemplateReadinessTests(unittest.TestCase):

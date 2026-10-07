@@ -45,6 +45,52 @@ def sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def validate_preflight(report: dict, project: dict, project_dir: Path) -> list[str]:
+    """Reject failed or stale preflight evidence at downstream gates."""
+    errors = []
+    if report.get("status") != "pass" or report.get("errors"):
+        errors.append("预检未通过；不能进入分镜批准或交付")
+    recorded = report.get("inputs") or {}
+    for key in ("srt", "audio"):
+        value = (project.get("inputs") or {}).get(key)
+        if not isinstance(value, str) or not value:
+            errors.append(f"预检依赖缺少 project.inputs.{key}")
+            continue
+        path = (project_dir / value).resolve()
+        try:
+            if not path.is_file() or sha256(path) != recorded.get(f"{key}_sha256"):
+                errors.append(f"预检 {key} 输入不存在或 SHA-256 已过期")
+            elif key == "srt":
+                text, _ = read_text(path)
+                current_cues, parse_errors = parse_srt(text)
+                if parse_errors or [asdict(cue) for cue in current_cues] != (report.get("srt") or {}).get("cues"):
+                    errors.append("预检 cue 列表与当前 SRT 原文或时间不一致")
+        except (OSError, ValueError) as exc:
+            errors.append(f"预检 {key} 输入不可读：{exc}")
+    cues = (report.get("srt") or {}).get("cues")
+    if not isinstance(cues, list) or not cues:
+        errors.append("预检缺少有效 cue 列表")
+    else:
+        ids = set()
+        previous_end = -1
+        for cue in cues:
+            if not isinstance(cue, dict):
+                errors.append("预检 cue 必须为对象")
+                continue
+            cue_id, start, end = cue.get("id"), cue.get("start_ms"), cue.get("end_ms")
+            if type(cue_id) is not int or cue_id <= 0 or cue_id in ids:
+                errors.append("预检 cue ID 必须为唯一正整数")
+            if type(cue_id) is int:
+                ids.add(cue_id)
+            if type(start) is not int or type(end) is not int or not 0 <= start < end:
+                errors.append("预检 cue 时间无效")
+            else:
+                if start < previous_end:
+                    errors.append("预检 cue 逆序或重叠")
+                previous_end = end
+    return errors
+
+
 def read_text(path: Path) -> tuple[str, str]:
     data = path.read_bytes()
     for encoding in ("utf-8-sig", "utf-16", "gb18030"):
@@ -154,8 +200,12 @@ def build_report(args: argparse.Namespace) -> dict:
         errors.append("SRT 中没有有效 cue")
 
     previous: Cue | None = None
+    cue_ids: set[int] = set()
     total_gap_ms = 0
     for cue in cues:
+        if cue.id <= 0 or cue.id in cue_ids:
+            errors.append(f"cue {cue.id} ID 必须为唯一正整数")
+        cue_ids.add(cue.id)
         if not cue.text:
             errors.append(f"cue {cue.id} 文本为空")
         if cue.end_ms <= cue.start_ms:

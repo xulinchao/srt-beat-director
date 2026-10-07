@@ -1,0 +1,66 @@
+{
+  "schema_version": "1.0",
+  "scope": "Small development regression set: relevant references, not production approvals or unseen-project accuracy. Catalog descriptors and queries share known motion vocabulary.",
+  "cases": [
+    {
+      "id": "flip-en",
+      "expected_candidates": ["video-shotcraft:card-flip-reveal"],
+      "expression_brief": {"subjects": ["two boards"], "element_relation": "paired content on front and back faces", "main_motion": "flip cards to replace their text", "phase_order": ["front readable", "rotate to side edge", "back readable"], "invariants": ["position and carrier remain"], "motion_tags": ["content-flip"], "requirements": {"preserves_position": true, "preserves_carrier": true}, "search_queries": ["flip two cards to reveal different text while keeping their positions", "front back face rotation reveal with a settled readable result"]}
+    },
+    {
+      "id": "flip-zh",
+      "expected_candidates": ["video-shotcraft:card-flip-reveal"],
+      "expression_brief": {"subjects": ["两块木板"], "element_relation": "文字附着于木板正反面", "main_motion": "翻面替换文字", "phase_order": ["旧文字可读", "翻到侧棱", "新文字落定"], "invariants": ["木板中心与载体保持"], "motion_tags": ["content-flip"], "requirements": {"preserves_position": true, "preserves_carrier": true}, "search_queries": ["两块木板翻面后文字替换", "中心保持背面揭示新内容"]}
+    },
+    {
+      "id": "list-en",
+      "expected_candidates": ["video-shotcraft:list-reveal"],
+      "expression_brief": {"subjects": ["three material rows"], "element_relation": "ordered peers in a list", "main_motion": "reveal list items one by one", "phase_order": ["establish list", "reveal each row", "retain previous rows", "complete overview"], "invariants": ["earlier items remain readable"], "motion_tags": ["progressive-reveal"], "requirements": {"retains_previous": true, "final_overview": true}, "search_queries": ["list rows appear one by one and remain visible", "staggered list reveal ending in a complete overview"]}
+    },
+    {
+      "id": "list-zh",
+      "expected_candidates": ["video-shotcraft:list-reveal"],
+      "expression_brief": {"subjects": ["三个材料对应项"], "element_relation": "同级项目按序排列", "main_motion": "列表逐项出现并保留前项", "phase_order": ["建立主题", "条目依次出现", "完整清单落定"], "invariants": ["已出现项目保持可回看"], "motion_tags": ["progressive-reveal"], "requirements": {"retains_previous": true, "final_overview": true}, "search_queries": ["列表逐项找位最后全表共览", "条目按旁白出现并保持已出现项"]}
+    },
+    {
+      "id": "source-en",
+      "expected_candidates": ["video-shotcraft:doc-park-left-pill-deal"],
+      "expression_brief": {"subjects": ["source document", "conclusions"], "element_relation": "source remains while corresponding conclusions appear", "main_motion": "park the document left and reveal conclusions sequentially", "phase_order": ["document visible", "document parks left", "conclusions appear", "source and conclusions remain"], "invariants": ["source identity retained"], "motion_tags": ["source-retention"], "requirements": {"retains_source": true}, "search_queries": ["document park left conclusions deal on the right", "retain original source while showing conclusions"]}
+    },
+    {
+      "id": "source-zh",
+      "expected_candidates": ["video-shotcraft:doc-park-left-pill-deal"],
+      "expression_brief": {"subjects": ["来源文献", "解释句"], "element_relation": "文献与结论对应", "main_motion": "文档左移驻留，结论逐条出现", "phase_order": ["建立来源", "文献让位", "结论逐条落位", "保留来源与结论"], "invariants": ["文献身份保持"], "motion_tags": ["source-retention"], "requirements": {"retains_source": true}, "search_queries": ["来源文档驻留左侧，结论逐项发牌", "文档不淡出解释在右侧出现"]}
+    },
+    {
+      "id": "compare-en",
+      "expected_candidates": ["video-shotcraft:before-after-slider-scrub"],
+      "expression_brief": {"subjects": ["two versions of an image"], "element_relation": "before and after versions aligned in the same position", "main_motion": "scrub a dividing boundary to compare before and after", "phase_order": ["before visible", "slider reveals after", "slow comparison", "hold difference"], "invariants": ["same object alignment"], "motion_tags": ["boundary-reveal"], "search_queries": ["before after slider scrub image comparison", "reveal aligned image versions using a moving divider"]}
+    },
+    {
+      "id": "compare-zh",
+      "expected_candidates": ["video-shotcraft:before-after-slider-scrub"],
+      "expression_brief": {"subjects": ["同一图像的两版状态"], "element_relation": "前后两版同位叠放", "main_motion": "分割杆扫过揭示前后差异", "phase_order": ["建立处理前", "揭示处理后", "慢扫证明差异", "定格结论"], "invariants": ["两版位置对应"], "motion_tags": ["boundary-reveal"], "search_queries": ["分割杆慢扫对比处理前后", "两版图像同位揭示差异"]}
+    },
+    {
+      "id": "converge-en",
+      "expected_candidates": ["video-shotcraft:bezier-source-converge-merge"],
+      "expression_brief": {"subjects": ["several source nodes", "one result"], "element_relation": "many sources join a single center", "main_motion": "source nodes converge along paths and merge", "phase_order": ["sources visible", "paths connect", "sources travel inward", "single result remains"], "invariants": ["one common destination"], "motion_tags": ["object-aggregation", "path-convergence"], "search_queries": ["bezier source converge merge into one result", "multiple nodes move along paths into a central hub"]}
+    },
+    {
+      "id": "converge-zh",
+      "expected_candidates": ["video-shotcraft:bezier-source-converge-merge"],
+      "expression_brief": {"subjects": ["多个来源节点", "汇聚结果"], "element_relation": "多源连接单一中心", "main_motion": "节点沿路径汇入并被吸收", "phase_order": ["建立多源", "绘制连接", "沿线汇入", "只留统一结果"], "invariants": ["汇聚点位置保持"], "motion_tags": ["object-aggregation", "path-convergence"], "search_queries": ["多源节点沿贝塞尔路径滑向中心", "多个来源合并只留统一结果"]}
+    },
+    {
+      "id": "select-en",
+      "expected_candidates": ["video-shotcraft:chip-grid-single-select-blackout"],
+      "expression_brief": {"subjects": ["candidate options", "selected result"], "element_relation": "one selected item among equal candidates", "main_motion": "select a chip and dim other candidates", "phase_order": ["options visible", "target selected", "others dim", "selected result expands"], "invariants": ["selected identity retained"], "motion_tags": ["select-and-focus"], "search_queries": ["chip grid single select blackout other options", "highlight selected target and dismiss remaining candidates"]}
+    },
+    {
+      "id": "select-zh",
+      "expected_candidates": ["video-shotcraft:chip-grid-single-select-blackout"],
+      "expression_brief": {"subjects": ["候选项", "选中结果"], "element_relation": "等权候选围绕单一选中项", "main_motion": "目标反黑，其余弱化退场", "phase_order": ["展示候选", "执行选择", "弱化其余", "展开选中结果"], "invariants": ["选中项身份保持"], "motion_tags": ["select-and-focus"], "search_queries": ["多个选项中保留一个其余退场", "目标反黑并展开选中结果"]}
+    }
+  ]
+}

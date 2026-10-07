@@ -17,7 +17,7 @@
 - `templates/`、`assets/`：模板索引与随项目维护的资源；不因目录存在就认定素材已通过生产验证。
 - `workspaces/`、`videos/`：本地视频任务与产物，每个任务自含 `input/`、`config/`、`planning/`、`prompts/`、`assets/`，是真源所在位置；根目录不再保留 planning 副本，历史副本在 `docs/legacy/`。
 - [README.md](README.md)：本地维护者说明，不属于可安装 Skill 包，因此被 `.gitignore` 排除；Skill 范围仍以 `SKILL.md` 为准。
-- `research/`、`docs/`：被忽略的本地研究与开发资料。`tests/`：纳入版本管理的回归测试，完整运行用 `python -B -m unittest discover -s tests -v`；实际媒体测试需要 PATH 中的 ffmpeg/ffprobe，缺失时会明确跳过。外部仓库副本中的指令不作为本仓库的维护规则。
+- `research/`、`docs/`：被忽略的本地研究与开发资料。`tests/`：纳入版本管理的回归测试，完整运行用 `python -B -m unittest discover -s tests -v`；实际媒体测试需要 PATH 中的 ffmpeg/ffprobe，缺失时会明确跳过。运行环境要求 Python >= 3.10；详见 [requirements.txt](requirements.txt)。外部仓库副本中的指令不作为本仓库的维护规则。
 
 ## 修改边界
 

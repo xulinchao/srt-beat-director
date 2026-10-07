@@ -1,0 +1,12 @@
+# knowledge-abroll-video Skill 运行依赖
+#
+# Python >= 3.10（脚本使用 int | None 联合类型语法）
+#
+# 外部工具（需在 PATH 中）：
+#   ffmpeg, ffprobe — 音视频探测与处理
+#   缺失时媒体相关测试自动跳过，不影响非媒体功能
+#
+# 核心脚本无第三方 Python 包依赖（纯标准库）。
+# 以下为可选依赖（仅特定脚本使用）：
+
+# Pillow>=9.0  # scripts/inspect_baseline.py — 图片尺寸与安全区检查（可选）

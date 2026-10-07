@@ -4,6 +4,8 @@
 
 ## 1. 确认目标与保护现状
 
+全时长候选、动态预览同样遵循已选主工程；不能把“未正式批准”解释为本地整片合成例外。新质量门的样片与全片审阅绑定实际导出和独立工程读取快照，每镜至少有独立实例。把一条已经合成的整片导入后映射成所有镜头，不能证明逐镜组装已执行；具体检查见[连续镜头质量门](sequence-quality.md)。
+
 续做现有项目时：
 
 1. 先用 ChatCut Desktop 读取活动项目；按项目 ID 和名称确认目标，不能只凭当前窗口猜测。
@@ -77,6 +79,8 @@ HyperFrames 与 Remotion 都是镜头动画实现层，各自维护源工程，C
 `review_mode=manual` 等待用户确认。`review_mode=continuous` 由代理完成同一 QA，记录 `review_source=agent-qa-under-user-authorization` 后继续；计费、账户、发布和系统权限不包含在连续执行授权中。
 
 最终生成 `reports/timeline-audit.json/.md`，逐镜记录：计划时间、实际时间线范围、ChatCut item ID、asset ID、A/B 职责、来源、实现工具和覆盖状态。A-roll 的 `action_sequence` 与 B-roll 的 `motion_sequence` 都逐节拍记录计划 `at_ms`、实际 `timeline_at_ms`、生产证据资产、文件内证据时间和时间线实例；计划多个状态而时间线只放置单张图加推镜、或 B-roll 只有本地渲染而没有时间线 item 时，均判定为未覆盖。所有镜头覆盖、时长和 QA 通过后，使用 ChatCut Desktop 导出最终 MP4，并验证文件存在、非空和时长合理。
+
+审计前保存实际项目/素材实例读取结果为独立 JSON，并按 [契约 §7](contracts.md#独立时间线证据) 生成版本化 source_snapshot；逐项记录 origin 字段映射、裁切源起点和速度，不能从计划或审计复制一份“实际工程”。导出后绑定本次成片哈希，核对原始结果、源资产与节拍时间映射。程序化镜头填写 production.source_files；manifest.files 列齐实际交付文件并验证哈希，批准更新项目配置后刷新对应清单项再跑 final。未知原始字段或复杂变速无法映射时保留缺口，先明确实际工程行为。
 
 交付报告列出实际 A-roll、B-roll、ChatCut 素材、HyperFrames / Remotion 素材、已有文件、开源来源与具体路径、时间线一致性、素材缺口、成片时间线 ID 和最终导出绝对路径。把统一 `final_artifact` 同步写入项目配置、QA 和 manifest，最后按 [qa.md](qa.md) §7 完成 `review`、当前审核模式下的批准和 `final` 校验。
 

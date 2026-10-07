@@ -10,6 +10,8 @@ import sys
 from pathlib import Path
 from validate_design import validate as validate_design
 from sample_dependencies import validate_snapshot
+from motion_review import POLICY, validate_visual_review
+from sequence_quality import validate as validate_sequence_quality
 
 
 def parse_args() -> argparse.Namespace:
@@ -79,6 +81,14 @@ def validate(project_dir: Path) -> dict:
         elif approved_baseline_hash and sha256(candidate_path) != approved_baseline_hash:
             errors.append("视觉基线批准 SHA-256 与 candidate review 不一致")
         validate_review_source("视觉基线", baseline_approval)
+        if candidate_path and candidate_path.is_file():
+            plan = load(plan_path) if plan_path.is_file() else {}
+            if project.get("motion_review_policy") == POLICY or plan.get("motion_review_policy") == POLICY:
+                motion_report = validate_visual_review(project_dir, plan, project, load(candidate_path), approve=True)
+                errors.extend(motion_report["errors"])
+                warnings.extend(motion_report["warnings"])
+            else:
+                warnings.append("旧视觉基线仅检查历史审批一致性；没有验证新动作证据门")
     elif approved_baseline_hash:
         warnings.append("视觉基线未批准，但仍保留非空批准 SHA-256")
 
@@ -98,6 +108,9 @@ def validate(project_dir: Path) -> dict:
             errors.append("样片批准 SHA-256 与文件不一致")
         validate_review_source("样片", sample_approval)
         errors.extend(validate_snapshot(project_dir, sample_approval))
+        sequence_report = validate_sequence_quality(project_dir, "sample")
+        errors.extend(sequence_report["errors"])
+        warnings.extend(sequence_report["warnings"])
 
     final_status = str(statuses.get("final", ""))
     final_approval = approvals.get("final") or {}
@@ -115,6 +128,9 @@ def validate(project_dir: Path) -> dict:
             elif sha256(artifact_path) != artifact_hash:
                 errors.append("final_artifact SHA-256 与最终文件不一致")
     if final_status == "approved":
+        sequence_report = validate_sequence_quality(project_dir, "delivery")
+        errors.extend(sequence_report["errors"])
+        warnings.extend(sequence_report["warnings"])
         if str(final_approval.get("sha256") or "").lower() != str((final_artifact or {}).get("sha256") or "").lower():
             errors.append("最终状态为 approved，但批准 SHA-256 与 final_artifact 不一致")
         validate_review_source("最终成片", final_approval)

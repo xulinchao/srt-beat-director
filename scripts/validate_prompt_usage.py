@@ -9,6 +9,10 @@ import json
 import sys
 from pathlib import Path
 from validate_design import validate as validate_design
+from media_evidence import validate_source_time
+from motion_review import POLICY, motion_mode, validate_motion_plan, validate_visual_review
+from prompt_bindings import validate_binding
+from sequence_quality import validate as validate_sequence_quality
 
 
 VALID_STATUSES = {"prepared", "used", "completed", "failed"}
@@ -21,6 +25,57 @@ B_ROLL_SEQUENCE_MODES = {
     "verified-media-sequence",
     "text-motion",
 }
+LAYOUT_REVIEW_POLICY = "motion-first-v1"
+
+
+def validate_layout_review(record_path: Path, project_dir: Path, project: dict,
+                           stage: str, errors: list[str]) -> None:
+    if not record_path.is_file():
+        return
+    try:
+        record = load(record_path)
+    except (OSError, ValueError):
+        return
+    label = record_path.relative_to(project_dir).as_posix()
+    review = record.get("layout_review")
+    if not isinstance(review, dict):
+        errors.append(f"{label} 缺少 layout_review；落定帧不能代替运动方案与动态检查")
+        return
+    mode = review.get("mode")
+    if mode not in {"key-states", "reuse", "source-readability", "static-hold"}:
+        errors.append(f"{label} layout_review.mode 无效")
+    if not str(review.get("reason") or "").strip():
+        errors.append(f"{label} layout_review 缺少选择检查方式的 reason")
+    review_status = review.get("status", "completed")
+    if review_status not in {"planned", "completed"}:
+        errors.append(f"{label} layout_review.status 无效")
+    if stage == "produced" and review_status != "completed":
+        errors.append(f"{label} layout_review 尚未完成实际检查")
+    source = review.get("review_source")
+    if review_status == "planned" and source is not None:
+        errors.append(f"{label} 尚未检查的 layout_review 不得填写批准来源")
+    elif review_status == "completed" and source not in {"user", "agent-qa-under-user-authorization"}:
+        errors.append(f"{label} layout_review 缺少有效 review_source")
+    elif source == "agent-qa-under-user-authorization" and project.get("review_mode") != "continuous":
+        errors.append(f"{label} layout_review 代理自检须有 continuous 授权")
+    artifacts = review.get("artifacts")
+    if not isinstance(artifacts, list) or not artifacts:
+        errors.append(f"{label} layout_review 缺少实际检查证据")
+        artifacts = []
+    elif mode == "key-states" and len(set(str(item) for item in artifacts)) < 2:
+        errors.append(f"{label} key-states 至少检查两个不同的关键状态")
+    for item in artifacts + ([review["dynamic_preview"]] if review.get("dynamic_preview") else []):
+        if not isinstance(item, str) or not item or Path(item).is_absolute():
+            errors.append(f"{label} layout_review 证据须为项目内相对路径")
+            continue
+        path = (project_dir / item).resolve()
+        if not path.is_relative_to(project_dir.resolve()) or (review_status == "completed" and not path.is_file()):
+            errors.append(f"{label} layout_review 证据不存在或越界：{item}")
+    sequence_mode = (record.get("motion_sequence") or {}).get("mode")
+    if mode == "static-hold" and sequence_mode != "single-state":
+        errors.append(f"{label} static-hold 不能删减多状态运动检查")
+    if stage == "produced" and sequence_mode != "single-state" and not review.get("dynamic_preview"):
+        errors.append(f"{label} 多状态 B-roll 缺少带原旁白检查的 dynamic_preview")
 
 
 def required_a_roll_beat_count(duration_ms: int) -> int:
@@ -68,6 +123,7 @@ def validate_record(
     errors: list[str],
     checked: list[str],
     selection_report: str | None = None,
+    prompts_path: Path | None = None,
 ) -> None:
     label = record_path.relative_to(project_dir).as_posix()
     if not record_path.is_file():
@@ -88,7 +144,12 @@ def validate_record(
         errors.append(f"{label} 缺少 prompt_ids：{missing_ids}")
     if record.get("prompt_source") != "references/production-prompts.md":
         errors.append(f"{label} prompt_source 必须为 references/production-prompts.md")
-    if record.get("prompt_source_sha256") != prompt_hash:
+    if "prompt_binding" in record:
+        if prompts_path is None:
+            errors.append(f"{label} 缺少当前提示词真源，不能校验分区绑定")
+        else:
+            errors.extend(f"{label} {message}" for message in validate_binding(project_dir, record, prompts_path))
+    elif record.get("prompt_source_sha256") != prompt_hash:
         errors.append(f"{label} 绑定的生产提示词 SHA-256 已过期或缺失")
     if record.get("inputs") in (None, {}, []):
         errors.append(f"{label} inputs 不能为空")
@@ -125,8 +186,11 @@ def validate_a_roll_sequence(
     shot: dict,
     stage: str,
     errors: list[str],
+    media_cache: dict | None = None,
 ) -> None:
     label = record_path.relative_to(project_dir).as_posix()
+    if media_cache is None:
+        media_cache = {}
     if not record_path.is_file():
         return
     try:
@@ -154,7 +218,10 @@ def validate_a_roll_sequence(
         return
     if mode == "single-state" and len(plan_beats) != 1:
         errors.append(f"{label} single-state 只能落实一个计划节拍")
-    if len(plan_beats) == 1:
+    planned_mode = motion_mode(shot)
+    if planned_mode is not None and mode != planned_mode:
+        errors.append(f"{label} action_sequence.mode 与计划 motion_mode 不一致")
+    if mode == "single-state":
         static_reason = str(shot.get("static_reason") or "").strip()
         if not static_reason or normalize_text(sequence.get("static_reason")) != normalize_text(static_reason):
             errors.append(f"{label} 单状态必须继承计划 static_reason")
@@ -207,6 +274,9 @@ def validate_a_roll_sequence(
                 errors.append(f"{beat_label} continuous-motion 需要非负 artifact_time_ms")
             else:
                 evidence_times.append(artifact_time_ms)
+                if artifact:
+                    errors.extend(f"{beat_label} {message}" for message in validate_source_time(
+                        resolve_project_path(project_dir, artifact), artifact_time_ms, media_cache))
 
     if stage == "produced" and mode == "state-sequence":
         if len(set(evidence_paths)) < len(plan_beats):
@@ -223,8 +293,11 @@ def validate_b_roll_sequence(
     shot: dict,
     stage: str,
     errors: list[str],
+    media_cache: dict | None = None,
 ) -> None:
     label = record_path.relative_to(project_dir).as_posix()
+    if media_cache is None:
+        media_cache = {}
     if not record_path.is_file():
         return
     try:
@@ -239,6 +312,9 @@ def validate_b_roll_sequence(
     mode = sequence.get("mode")
     if mode not in B_ROLL_SEQUENCE_MODES:
         errors.append(f"{label} motion_sequence.mode 无效：{mode}")
+    planned_mode = motion_mode(shot)
+    if planned_mode is not None and mode != planned_mode:
+        errors.append(f"{label} motion_sequence.mode 与计划 motion_mode 不一致")
 
     plan_beats = shot.get("narration_beats") or []
     beats = sequence.get("beats")
@@ -254,11 +330,12 @@ def validate_b_roll_sequence(
             f"当前为 {len(beats)} / {len(plan_beats)}"
         )
     if mode == "single-state":
-        duration_ms = int(shot.get("end_ms", 0)) - int(shot.get("start_ms", 0))
-        if len(plan_beats) != 1 or duration_ms >= A_ROLL_MULTI_STATE_THRESHOLD_MS:
-            errors.append(f"{label} 仅单节拍且短于 4000ms 时允许 single-state")
+        if len(plan_beats) != 1:
+            errors.append(f"{label} single-state 只能落实一个计划节拍")
         if not str(sequence.get("static_reason") or "").strip():
             errors.append(f"{label} single-state 必须说明 static_reason")
+        if not str(shot.get("static_reason") or "").strip() or normalize_text(sequence.get("static_reason")) != normalize_text(shot.get("static_reason")):
+            errors.append(f"{label} single-state 必须继承计划 static_reason")
 
     evidence_paths: list[str] = []
     evidence_times: list[int] = []
@@ -299,6 +376,9 @@ def validate_b_roll_sequence(
                 errors.append(f"{beat_label} {mode} 需要非负 artifact_time_ms")
             else:
                 evidence_times.append(artifact_time_ms)
+                if artifact:
+                    errors.extend(f"{beat_label} {message}" for message in validate_source_time(
+                        resolve_project_path(project_dir, artifact), artifact_time_ms, media_cache))
 
     if stage == "produced" and mode in {"state-sequence", "verified-media-sequence"}:
         if len(set(evidence_paths)) < len(plan_beats):
@@ -312,6 +392,7 @@ def validate(project_dir: Path, prompts_path: Path, stage: str) -> dict:
     errors: list[str] = []
     warnings: list[str] = []
     checked: list[str] = []
+    media_cache: dict = {}
 
     if not prompts_path.is_file():
         return {
@@ -338,6 +419,15 @@ def validate(project_dir: Path, prompts_path: Path, stage: str) -> dict:
 
     plan = load(plan_path)
     project = load(project_path)
+    motion_report = validate_motion_plan(plan, project)
+    errors.extend(motion_report["errors"])
+    warnings.extend(motion_report["warnings"])
+    sequence_report = validate_sequence_quality(project_dir, "planning" if stage == "planning" else "prepared", plan=plan, project=project)
+    errors.extend(sequence_report["errors"])
+    warnings.extend(sequence_report["warnings"])
+    layout_policy = plan.get("broll_layout_policy")
+    if layout_policy not in {None, LAYOUT_REVIEW_POLICY}:
+        errors.append(f"未知 broll_layout_policy：{layout_policy}")
     design_report = validate_design(project_dir, stage)
     errors.extend(design_report["errors"])
     warnings.extend(design_report["warnings"])
@@ -349,6 +439,7 @@ def validate(project_dir: Path, prompts_path: Path, stage: str) -> dict:
         expected_subject="visual-plan",
         required_prompt_ids={"visual-plan-v1"},
         prompt_hash=prompt_hash,
+        prompts_path=prompts_path,
         stage="produced" if stage == "produced" else "prepared",
         errors=errors,
         checked=checked,
@@ -369,6 +460,7 @@ def validate(project_dir: Path, prompts_path: Path, stage: str) -> dict:
                     expected_subject=shot_id,
                     required_prompt_ids=required,
                     prompt_hash=prompt_hash,
+                    prompts_path=prompts_path,
                     stage=stage,
                     errors=errors,
                     checked=checked,
@@ -379,6 +471,7 @@ def validate(project_dir: Path, prompts_path: Path, stage: str) -> dict:
                     shot=shot,
                     stage=stage,
                     errors=errors,
+                    media_cache=media_cache,
                 )
             elif shot.get("screen_role") == "B":
                 selection = f"planning/template-selection/{shot_id}.json"
@@ -389,6 +482,7 @@ def validate(project_dir: Path, prompts_path: Path, stage: str) -> dict:
                     expected_subject=shot_id,
                     required_prompt_ids={"b-roll-motion-selection-v1"},
                     prompt_hash=prompt_hash,
+                    prompts_path=prompts_path,
                     stage=stage,
                     errors=errors,
                     checked=checked,
@@ -400,9 +494,31 @@ def validate(project_dir: Path, prompts_path: Path, stage: str) -> dict:
                     shot=shot,
                     stage=stage,
                     errors=errors,
+                    media_cache=media_cache,
                 )
+                if layout_policy == LAYOUT_REVIEW_POLICY:
+                    validate_layout_review(record_path, project_dir, project, stage, errors)
+                else:
+                    warnings.append(f"{shot_id} 旧计划未声明 broll_layout_policy；未校验 layout_review，不代表画面检查通过")
 
         bible_path = project_dir / "config" / "character-bible.json"
+        if stage == "produced" and plan.get("motion_review_policy") == POLICY:
+            for shot in plan.get("shots") or []:
+                folder = "a-scenes" if shot.get("screen_role") == "A" else "b-scenes"
+                path = project_dir / "prompts" / folder / f"{shot['id']}.json"
+                if not path.is_file():
+                    continue
+                record = load(path)
+                entry = record.get("motion_review")
+                if not isinstance(entry, dict) or entry.get("shot_id") != shot["id"]:
+                    errors.append(f"{shot['id']} 缺少对应镜头的 motion_review 实际检查证据")
+                    continue
+                report = validate_visual_review(project_dir, plan, project, {
+                    "policy": POLICY, "scope": "motion-baseline", "plan_sha256": entry.get("plan_sha256"),
+                    "design_ref": record.get("design_ref"), "shots": [entry],
+                }, require_representatives=False)
+                errors.extend(report["errors"])
+                warnings.extend(report["warnings"])
         if bible_path.is_file():
             bible = load(bible_path)
             if bible.get("generation_mode") == "generated-from-single-reference":
@@ -412,6 +528,7 @@ def validate(project_dir: Path, prompts_path: Path, stage: str) -> dict:
                     expected_subject="character-turnaround",
                     required_prompt_ids={"character-turnaround-v1"},
                     prompt_hash=prompt_hash,
+                    prompts_path=prompts_path,
                     stage=stage,
                     errors=errors,
                     checked=checked,

@@ -27,3 +27,7 @@
 *.log
 .DS_Store
 Thumbs.db
+
+# Qoder local state
+/.qoder/
+/.qoder-credits/

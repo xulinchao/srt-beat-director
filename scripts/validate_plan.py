@@ -10,7 +10,11 @@ import sys
 from collections import Counter
 from pathlib import Path
 
+from broll_expression import validate_reference_confirmation
 from broll_runtime import template_status, validate_runtime_decision
+from motion_review import motion_mode, validate_motion_plan
+from preflight import validate_preflight
+from sequence_quality import validate_plan as validate_sequence_plan
 
 
 CANONICAL_SEMANTIC_STRUCTURES = {
@@ -197,8 +201,11 @@ def validate_narration_binding(
         if isinstance(at_ms, int):
             previous_at_ms = at_ms
         expected_text = "\n".join(cue["text"] for cue in beat_cues)
-        if normalize_text(beat.get("trigger_text")) != normalize_text(expected_text):
-            errors.append(f"{beat_label} trigger_text 与绑定 cue 原文不一致")
+        actual = normalize_text(beat.get("trigger_text"))
+        expected = normalize_text(expected_text)
+        # 允许：完全等于 cue 全文拼接，或者是 cue 全文的连续子串；空值不算片段
+        if not actual or (actual != expected and actual not in expected):
+            errors.append(f"{beat_label} trigger_text 与绑定 cue 原文不一致（须为 cue 全文或其连续片段）")
         for key in ("information_change", "state_after"):
             if not str(beat.get(key) or "").strip():
                 errors.append(f"{beat_label} 缺少 {key}")
@@ -220,6 +227,8 @@ def validate_units(
 ) -> None:
     covered: list[int] = []
     previous_start = -1
+    previous_end = -1
+    cue_positions = {cue_id: index for index, cue_id in enumerate(expected_ids)}
 
     for position, unit in enumerate(units, start=1):
         unit_id = unit.get("id", f"{label}-{position}")
@@ -233,6 +242,10 @@ def validate_units(
             errors.append(f"{unit_id} 引用了不存在的 cue：{missing}")
             continue
 
+        positions = [cue_positions[cue_id] for cue_id in cue_ids]
+        if positions != list(range(positions[0], positions[0] + len(positions))):
+            errors.append(f"{unit_id} cue_ids 必须按原始顺序连续覆盖，不能跳号或逆序")
+
         cues = [cues_by_id[cue_id] for cue_id in cue_ids]
         expected_start = cues[0]["start_ms"]
         expected_end = cues[-1]["end_ms"]
@@ -245,7 +258,12 @@ def validate_units(
             errors.append(f"{unit_id} verbatim_text 与 SRT 原文不一致")
         if expected_start < previous_start:
             errors.append(f"{unit_id} 顺序逆序")
+        if expected_end <= expected_start:
+            errors.append(f"{unit_id} 语义区间无效")
+        if expected_start < previous_end:
+            errors.append(f"{unit_id} 与前一个语义区间重叠")
         previous_start = expected_start
+        previous_end = expected_end
 
     counts = Counter(covered)
     missing_ids = [cue_id for cue_id in expected_ids if counts[cue_id] == 0]
@@ -295,11 +313,19 @@ def main() -> int:
         print(str(exc), file=sys.stderr)
         return 2
 
+    errors.extend(validate_preflight(preflight, project, args.project.parent.parent))
     cues = preflight.get("srt", {}).get("cues", [])
     cues_by_id = {cue["id"]: cue for cue in cues}
     expected_ids = [cue["id"] for cue in cues]
     segments = content.get("semantic_segments", [])
     shots = plan.get("shots", [])
+    motion_report = validate_motion_plan(plan, project)
+    errors.extend(motion_report["errors"])
+    warnings.extend(motion_report["warnings"])
+
+    sequence_report = validate_sequence_plan(plan, project)
+    errors.extend(sequence_report["errors"])
+    warnings.extend(sequence_report["warnings"])
 
     validate_units("content-analysis", segments, cues_by_id, expected_ids, errors)
     validate_units("visual-plan", shots, cues_by_id, expected_ids, errors)
@@ -350,16 +376,32 @@ def main() -> int:
             if template_id and not template_id.startswith(("new:", "external-research:", "external:")):
                 if template_index and template_id not in template_ids:
                     errors.append(f"{shot.get('id')} template_id 不存在或已过期：{template_id}")
-            if template_id.startswith(("new:", "external:")):
-                expected_record = f"planning/broll-research/{shot.get('id')}.json"
-                if shot.get("broll_research_record") != expected_record:
-                    errors.append(
-                        f"{shot.get('id')} 使用 {template_id} 前必须填写 broll_research_record={expected_record}"
-                    )
             if template_id.startswith("external-research:"):
                 production = shot.get("production") or {}
                 if production.get("asset_status") in {"in-progress", "ready"}:
                     errors.append(f"{shot.get('id')} 外部研究尚未完成，不能标记为 {production.get('asset_status')}")
+            expected_record = f"planning/broll-research/{shot.get('id')}.json"
+            if template_id.startswith("new:"):
+                research_path = args.project.parent.parent / expected_record
+                if shot.get("broll_research_record") != expected_record or not research_path.is_file():
+                    errors.append(f"{shot.get('id')} 自建前必须有 broll_research_record={expected_record} 及实际研究文件")
+            if template_id.startswith("external:"):
+                selector_path = args.project.parent.parent / f"planning/template-selection/{shot.get('id')}.json"
+                research_path = args.project.parent.parent / expected_record
+                try:
+                    selector_report = load(selector_path) if selector_path.is_file() else {}
+                except (OSError, json.JSONDecodeError):
+                    selector_report = {}
+                if selector_report.get("status") == "candidates-recalled" and not research_path.is_file():
+                    if shot.get("broll_research_record"):
+                        errors.append(f"{shot.get('id')} 参考仓库快路径不能声明不存在的 broll_research_record")
+                    errors.extend(f"{shot.get('id')} {message}" for message in validate_reference_confirmation(
+                        shot, selector_report, args.project.parent.parent,
+                        Path(project["repositories_root"]) if project.get("repositories_root") else None))
+                elif shot.get("broll_research_record") == expected_record and research_path.is_file():
+                    pass
+                else:
+                    errors.append(f"{shot.get('id')} 使用 {template_id} 前必须填写 broll_research_record={expected_record}")
         if not shot.get("viewer_takeaway"):
             errors.append(f"{shot.get('id')} 缺少 viewer_takeaway")
         design = shot.get("visual_design") or {}
@@ -377,7 +419,7 @@ def main() -> int:
         if role == "A":
             duration_ms = shot.get("end_ms", 0) - shot.get("start_ms", 0)
             required_changes = required_a_roll_change_count(duration_ms)
-            if len(changes) == 1 and not str(shot.get("static_reason") or "").strip():
+            if motion_mode(shot) == "single-state" and not str(shot.get("static_reason") or "").strip():
                 errors.append(f"{shot.get('id')} 单状态 A-roll 必须填写 static_reason")
             if len(changes) < required_changes:
                 errors.append(

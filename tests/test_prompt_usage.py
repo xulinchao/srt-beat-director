@@ -5,6 +5,8 @@ import json
 import sys
 import tempfile
 import unittest
+import shutil
+import subprocess
 from pathlib import Path
 
 
@@ -128,9 +130,40 @@ class PromptUsageActionSequenceTests(unittest.TestCase):
         self.write_json("planning/visual-plan.json", {"shots": [self.shot]})
         self.write_plan_prompt("prepared")
         self.write_a_record([self.action_beat(1)], "prepared")
+        path = self.project_dir / "prompts/a-scenes/S001.json"
+        record = json.loads(path.read_text(encoding="utf-8"))
+        record["action_sequence"]["mode"] = "single-state"
+        self.write_json("prompts/a-scenes/S001.json", record)
         report = validate_prompt_usage.validate(self.project_dir, self.prompts_path, "prepared")
         self.assertEqual("fail", report["status"])
         self.assertTrue(any("static_reason" in value for value in report["errors"]))
+
+    def test_one_narration_beat_can_have_continuous_action_without_static_reason(self):
+        self.shot["narration_beats"] = self.shot["narration_beats"][:1]
+        self.shot["visual_design"] = {"motion_mode": "continuous-motion"}
+        self.write_json("planning/visual-plan.json", {"shots": [self.shot]})
+        self.write_plan_prompt("prepared")
+        self.write_a_record([self.action_beat(1)], "prepared")
+        path = self.project_dir / "prompts/a-scenes/S001.json"
+        record = json.loads(path.read_text(encoding="utf-8"))
+        record["action_sequence"]["mode"] = "continuous-motion"
+        self.write_json("prompts/a-scenes/S001.json", record)
+        report = validate_prompt_usage.validate(self.project_dir, self.prompts_path, "prepared")
+        self.assertEqual("pass", report["status"], report["errors"])
+
+    def test_implementation_cannot_silently_replace_motion_with_static_hold(self):
+        self.shot["narration_beats"] = self.shot["narration_beats"][:1]
+        self.shot["visual_design"] = {"motion_mode": "continuous-motion"}
+        self.shot["static_reason"] = "An unrelated hold reason must not discard planned action"
+        self.write_json("planning/visual-plan.json", {"shots": [self.shot]})
+        self.write_plan_prompt("prepared")
+        self.write_a_record([self.action_beat(1)], "prepared")
+        path = self.project_dir / "prompts/a-scenes/S001.json"
+        record = json.loads(path.read_text(encoding="utf-8"))
+        record["action_sequence"].update(mode="single-state", static_reason=self.shot["static_reason"])
+        self.write_json("prompts/a-scenes/S001.json", record)
+        report = validate_prompt_usage.validate(self.project_dir, self.prompts_path, "prepared")
+        self.assertTrue(any("motion_mode 不一致" in e for e in report["errors"]))
 
     def test_produced_state_sequence_requires_distinct_evidence_assets(self) -> None:
         self.write_plan_prompt("completed")
@@ -171,6 +204,16 @@ class PromptUsageActionSequenceTests(unittest.TestCase):
 
 
 class PromptUsageBrollMotionSequenceTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        if not shutil.which("ffmpeg") or not shutil.which("ffprobe"):
+            raise unittest.SkipTest("连续动画证据测试需要 ffmpeg/ffprobe")
+        cls.media_temp = tempfile.TemporaryDirectory()
+        cls.addClassCleanup(cls.media_temp.cleanup)
+        cls.movie = Path(cls.media_temp.name) / "motion.mp4"
+        subprocess.run(["ffmpeg", "-v", "error", "-f", "lavfi", "-i", "color=c=blue:s=16x16:r=10:d=6",
+                        "-c:v", "libx264", "-pix_fmt", "yuv420p", str(cls.movie)], check=True, capture_output=True)
+
     def setUp(self) -> None:
         self.temp_dir = tempfile.TemporaryDirectory()
         self.project_dir = Path(self.temp_dir.name)
@@ -209,7 +252,10 @@ class PromptUsageBrollMotionSequenceTests(unittest.TestCase):
 
     def create_artifact(self, name: str) -> str:
         relative_path = f"assets/b-scenes/{name}"
-        (self.project_dir / relative_path).write_bytes(b"asset")
+        if name.endswith(".mp4"):
+            shutil.copy2(self.movie, self.project_dir / relative_path)
+        else:
+            (self.project_dir / relative_path).write_bytes(b"asset")
         return relative_path
 
     def base_record(self, subject_id: str, prompt_ids: list[str], status: str) -> dict:
@@ -270,6 +316,128 @@ class PromptUsageBrollMotionSequenceTests(unittest.TestCase):
         report = validate_prompt_usage.validate(self.project_dir, self.prompts_path, "produced")
 
         self.assertEqual("pass", report["status"], report["errors"])
+
+    def test_motion_time_must_be_inside_actual_source(self):
+        self.write_plan_prompt()
+        self.write_b_record()
+        path = self.project_dir / "prompts/b-scenes/S001.json"
+        record = json.loads(path.read_text(encoding="utf-8"))
+        record["motion_sequence"]["beats"][-1]["evidence"]["artifact_time_ms"] = 6000
+        self.write_json("prompts/b-scenes/S001.json", record)
+        report = validate_prompt_usage.validate(self.project_dir, self.prompts_path, "produced")
+        self.assertTrue(any("超出素材时长" in e for e in report["errors"]), report)
+
+    def test_static_file_cannot_claim_continuous_motion(self):
+        self.write_plan_prompt()
+        self.write_b_record()
+        (self.project_dir / "assets/b-scenes/motion.mp4").write_bytes(b"not video")
+        report = validate_prompt_usage.validate(self.project_dir, self.prompts_path, "produced")
+        self.assertTrue(any("连续动画证据无法验证" in e for e in report["errors"]), report)
+
+    def enable_layout_policy(self, mode="key-states", preview=True):
+        self.write_json("planning/visual-plan.json", {"broll_layout_policy": "motion-first-v1", "shots": [self.shot]})
+        self.write_json("config/project.json", {"a_scene_mode": "full-ai-scene", "review_mode": "continuous"})
+        record_path = self.project_dir / "prompts/b-scenes/S001.json"
+        record = json.loads(record_path.read_text(encoding="utf-8"))
+        record["layout_review"] = {
+            "mode": mode, "reason": "Fixture: verify object anchors and Chinese capacity",
+            "artifacts": [self.create_artifact("before.png"), self.create_artifact("after.png")],
+            "review_source": "agent-qa-under-user-authorization",
+            "dynamic_preview": self.create_artifact("preview.mp4") if preview else None,
+        }
+        self.write_json("prompts/b-scenes/S001.json", record)
+        return record
+
+    def test_new_policy_requires_layout_review(self):
+        self.write_plan_prompt()
+        self.write_b_record()
+        self.write_json("planning/visual-plan.json", {"broll_layout_policy": "motion-first-v1", "shots": [self.shot]})
+        report = validate_prompt_usage.validate(self.project_dir, self.prompts_path, "prepared")
+        self.assertTrue(any("缺少 layout_review" in item for item in report["errors"]))
+
+    def test_key_states_with_preview_passes_protocol(self):
+        self.write_plan_prompt()
+        self.write_b_record()
+        self.enable_layout_policy()
+        report = validate_prompt_usage.validate(self.project_dir, self.prompts_path, "produced")
+        self.assertEqual(report["status"], "pass", report["errors"])
+
+    def test_still_only_cannot_pass_produced_motion_review(self):
+        self.write_plan_prompt()
+        self.write_b_record()
+        self.enable_layout_policy(preview=False)
+        prepared = validate_prompt_usage.validate(self.project_dir, self.prompts_path, "prepared")
+        self.assertEqual(prepared["status"], "pass", prepared["errors"])
+        produced = validate_prompt_usage.validate(self.project_dir, self.prompts_path, "produced")
+        self.assertTrue(any("dynamic_preview" in item for item in produced["errors"]))
+
+    def test_reuse_does_not_require_three_fresh_stills(self):
+        self.write_plan_prompt()
+        self.write_b_record()
+        record = self.enable_layout_policy(mode="reuse")
+        record["layout_review"]["artifacts"] = record["layout_review"]["artifacts"][:1]
+        self.write_json("prompts/b-scenes/S001.json", record)
+        report = validate_prompt_usage.validate(self.project_dir, self.prompts_path, "produced")
+        self.assertEqual(report["status"], "pass", report["errors"])
+
+    def test_key_states_requires_distinct_evidence(self):
+        self.write_plan_prompt()
+        self.write_b_record()
+        record = self.enable_layout_policy()
+        record["layout_review"]["artifacts"] = [record["layout_review"]["artifacts"][0]] * 2
+        self.write_json("prompts/b-scenes/S001.json", record)
+        report = validate_prompt_usage.validate(self.project_dir, self.prompts_path, "prepared")
+        self.assertTrue(any("两个不同" in item for item in report["errors"]))
+
+    def test_layout_evidence_cannot_escape_project(self):
+        self.write_plan_prompt()
+        self.write_b_record()
+        record = self.enable_layout_policy()
+        record["layout_review"]["artifacts"].append("../../outside.png")
+        self.write_json("prompts/b-scenes/S001.json", record)
+        report = validate_prompt_usage.validate(self.project_dir, self.prompts_path, "prepared")
+        self.assertTrue(any("不存在或越界" in item for item in report["errors"]))
+
+    def test_layout_agent_review_requires_continuous(self):
+        self.write_plan_prompt()
+        self.write_b_record()
+        self.enable_layout_policy()
+        self.write_json("config/project.json", {"a_scene_mode": "full-ai-scene", "review_mode": "manual"})
+        report = validate_prompt_usage.validate(self.project_dir, self.prompts_path, "prepared")
+        self.assertTrue(any("continuous 授权" in item for item in report["errors"]))
+
+    def test_long_static_evidence_is_allowed_with_plan_reason(self):
+        self.shot["narration_beats"] = self.shot["narration_beats"][:1]
+        self.shot["static_reason"] = "Keep the source readable through the quotation"
+        self.write_plan_prompt()
+        self.write_b_record()
+        record = self.enable_layout_policy(mode="static-hold", preview=False)
+        record["motion_sequence"].update(mode="single-state", static_reason=self.shot["static_reason"])
+        self.write_json("prompts/b-scenes/S001.json", record)
+        report = validate_prompt_usage.validate(self.project_dir, self.prompts_path, "produced")
+        self.assertEqual(report["status"], "pass", report["errors"])
+
+    def test_static_hold_cannot_discard_multiple_planned_states(self):
+        self.write_plan_prompt()
+        self.write_b_record()
+        record = self.enable_layout_policy(mode="static-hold")
+        record["motion_sequence"].update(mode="single-state", static_reason="Read source")
+        record["motion_sequence"]["beats"] = record["motion_sequence"]["beats"][:1]
+        self.write_json("prompts/b-scenes/S001.json", record)
+        report = validate_prompt_usage.validate(self.project_dir, self.prompts_path, "produced")
+        self.assertTrue(any("只能落实一个计划节拍" in item for item in report["errors"]))
+
+    def test_planned_layout_does_not_require_uncreated_stills_before_production(self):
+        self.write_plan_prompt()
+        self.write_b_record()
+        record = self.enable_layout_policy(preview=False)
+        record["layout_review"].update(status="planned", review_source=None,
+                                       artifacts=["prompts/b-scenes/planned-before.png", "prompts/b-scenes/planned-after.png"])
+        self.write_json("prompts/b-scenes/S001.json", record)
+        prepared = validate_prompt_usage.validate(self.project_dir, self.prompts_path, "prepared")
+        self.assertEqual(prepared["status"], "pass", prepared["errors"])
+        produced = validate_prompt_usage.validate(self.project_dir, self.prompts_path, "produced")
+        self.assertTrue(any("尚未完成实际检查" in item for item in produced["errors"]))
 
 
 if __name__ == "__main__":

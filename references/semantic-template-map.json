@@ -21,6 +21,7 @@
       "external_candidates": [
         {
           "id": "shotcraft-before-after-slider",
+          "motion_tags": ["same-position-replacement", "boundary-reveal"],
           "repository": "video-shotcraft",
           "path": "references/shots/data/before-after-slider-scrub.md",
           "material_types": ["verified-media", "no-material"],
@@ -32,10 +33,11 @@
             "phase_order": ["建立处理前", "快速揭示处理后", "慢扫证明差异", "定格结论"]
           },
           "license": "Apache-2.0",
-          "status": "port-required"
+          "status": "available"
         },
         {
           "id": "shotcraft-quad-parallel",
+          "motion_tags": ["parallel-comparison"],
           "repository": "video-shotcraft",
           "path": "references/shots/rhythm/quad-split-parallel-scenes.md",
           "material_types": ["verified-media", "no-material"],
@@ -47,7 +49,7 @@
             "phase_order": ["建立共同问题", "并列展示各对象", "同步比较", "高亮关键差异"]
           },
           "license": "Apache-2.0",
-          "status": "port-required"
+          "status": "available"
         }
       ]
     },
@@ -60,6 +62,7 @@
       "external_candidates": [
         {
           "id": "shotcraft-bezier-converge",
+          "motion_tags": ["object-aggregation", "path-convergence"],
           "repository": "video-shotcraft",
           "path": "references/shots/ui-entrance/bezier-source-converge-merge.md",
           "material_types": ["no-material"],
@@ -71,10 +74,11 @@
             "phase_order": ["建立多源", "绘制连接", "沿线汇入", "只留统一结果"]
           },
           "license": "Apache-2.0",
-          "status": "port-required"
+          "status": "available"
         },
         {
           "id": "shotcraft-integration-hub",
+          "motion_tags": ["hub-connection", "progressive-reveal"],
           "repository": "video-shotcraft",
           "path": "references/shots/ui-entrance/integration-hub-map.md",
           "material_types": ["verified-media", "no-material"],
@@ -86,10 +90,11 @@
             "phase_order": ["建立中心", "出现来源", "连接管线", "持续输送"]
           },
           "license": "Apache-2.0",
-          "status": "port-required"
+          "status": "available"
         },
         {
           "id": "shotcraft-avatar-radial-build",
+          "motion_tags": ["object-aggregation", "radial-build"],
           "repository": "video-shotcraft",
           "path": "references/shots/data/avatar-grid-radial-build-colorize.md",
           "material_types": ["verified-media", "no-material"],
@@ -101,7 +106,7 @@
             "phase_order": ["出现核心样本", "向外扩充", "形成整体", "统一高亮"]
           },
           "license": "Apache-2.0",
-          "status": "port-required"
+          "status": "available"
         }
       ]
     },
@@ -114,6 +119,7 @@
       "external_candidates": [
         {
           "id": "shotcraft-type-and-filter",
+          "motion_tags": ["filter-and-focus"],
           "repository": "video-shotcraft",
           "path": "references/shots/interaction/type-and-filter.md",
           "material_types": ["verified-media"],
@@ -125,10 +131,11 @@
             "phase_order": ["输入条件", "系统响应", "排除非目标", "确认目标"]
           },
           "license": "Apache-2.0",
-          "status": "port-required"
+          "status": "available"
         },
         {
           "id": "shotcraft-chip-single-select",
+          "motion_tags": ["select-and-focus"],
           "repository": "video-shotcraft",
           "path": "references/shots/interaction/chip-grid-single-select-blackout.md",
           "material_types": ["verified-media", "no-material"],
@@ -140,10 +147,11 @@
             "phase_order": ["展示候选", "执行选择", "弱化其余", "展开选中结果"]
           },
           "license": "Apache-2.0",
-          "status": "port-required"
+          "status": "available"
         },
         {
           "id": "shotcraft-scanline-focus",
+          "motion_tags": ["scan-and-focus"],
           "repository": "video-shotcraft",
           "path": "references/shots/effects/scanline-annotate-focus.md",
           "material_types": ["verified-media"],
@@ -155,7 +163,7 @@
             "phase_order": ["展示全貌", "扫描查找", "锁定目标", "补充说明"]
           },
           "license": "Apache-2.0",
-          "status": "port-required"
+          "status": "available"
         }
       ]
     },
@@ -168,6 +176,7 @@
       "external_candidates": [
         {
           "id": "shotcraft-progressive-card",
+          "motion_tags": ["layered-assembly", "progressive-reveal"],
           "repository": "video-shotcraft",
           "path": "references/shots/ui-entrance/product-card-progressive-assemble.md",
           "material_types": ["verified-media", "no-material"],
@@ -179,10 +188,11 @@
             "phase_order": ["建立主体", "加入一级信息", "加入二级信息", "强调关键字段"]
           },
           "license": "Apache-2.0",
-          "status": "port-required"
+          "status": "available"
         },
         {
           "id": "shotcraft-title-demote",
+          "motion_tags": ["title-demotion"],
           "repository": "video-shotcraft",
           "path": "references/shots/typography/title-demote-to-label.md",
           "material_types": ["no-material", "text-only"],
@@ -194,10 +204,11 @@
             "phase_order": ["建立父级", "父级让位", "出现子级", "稳定新层级"]
           },
           "license": "Apache-2.0",
-          "status": "port-required"
+          "status": "available"
         },
         {
           "id": "shotcraft-research-stack",
+          "motion_tags": ["stack-and-scroll"],
           "repository": "video-shotcraft",
           "path": "references/shots/ui-entrance/research-card-stack-scroll.md",
           "material_types": ["verified-media", "no-material"],
@@ -209,7 +220,7 @@
             "phase_order": ["建立主卡", "补充次级卡", "层级滚动", "回到当前重点"]
           },
           "license": "Apache-2.0",
-          "status": "port-required"
+          "status": "available"
         }
       ]
     },
@@ -222,6 +233,7 @@
       "external_candidates": [
         {
           "id": "shotcraft-input-trigger",
+          "motion_tags": ["input-trigger-result"],
           "repository": "video-shotcraft",
           "path": "references/shots/interaction/input-trigger-moves.md",
           "material_types": ["verified-media"],
@@ -233,10 +245,11 @@
             "phase_order": ["建立可操作对象", "执行输入", "即时反馈", "展示结果"]
           },
           "license": "Apache-2.0",
-          "status": "port-required"
+          "status": "available"
         },
         {
           "id": "shotcraft-theme-ripple-cause",
+          "motion_tags": ["ripple-state-change"],
           "repository": "video-shotcraft",
           "path": "references/shots/interaction/theme-switch-moves.md",
           "material_types": ["verified-media", "no-material"],
@@ -248,10 +261,11 @@
             "phase_order": ["输入命令", "确认触发点", "效果向外传播", "全局状态落定"]
           },
           "license": "Apache-2.0",
-          "status": "port-required"
+          "status": "available"
         },
         {
           "id": "shotcraft-chip-select-result",
+          "motion_tags": ["select-and-focus", "input-trigger-result"],
           "repository": "video-shotcraft",
           "path": "references/shots/interaction/chip-grid-single-select-blackout.md",
           "material_types": ["verified-media", "no-material"],
@@ -263,7 +277,7 @@
             "phase_order": ["展示条件", "选中条件", "收束干扰项", "出现结果"]
           },
           "license": "Apache-2.0",
-          "status": "port-required"
+          "status": "available"
         }
       ]
     },
@@ -275,7 +289,27 @@
       "local_template_ids": [],
       "external_candidates": [
         {
+          "id": "shotcraft-card-flip",
+          "motion_tags": ["content-flip"],
+          "repository": "video-shotcraft",
+          "path": "references/shots/transition/card-flip-reveal.md",
+          "material_types": ["verified-media", "no-material", "text-only"],
+          "presentation_types": ["verified-media", "infographic", "text-motion"],
+          "semantic_fit": "成对信息在同一载体的正反面切换；原卡是功能到成果，改为版本替换须实看适配。",
+          "skeleton": {
+            "element_relation": "正反信息附着于同一张卡片，卡片中心保持",
+            "main_motion": "沿 Y 轴翻面，在侧棱交换正反内容后落定",
+            "phase_order": ["建立正面", "翻到侧棱", "背面揭示", "保留背面供阅读"],
+            "invariants": ["载体与中心位置保持，正反信息须语义成对"]
+          },
+          "capabilities": {"preserves_position": true, "preserves_carrier": true, "preserves_content": false, "final_overview": true},
+          "known_limits": ["背面原设计为数字与短标签；长中文须适配验证", "占位演示不代表当前影片已验证"],
+          "license": "Apache-2.0",
+          "status": "available"
+        },
+        {
           "id": "shotcraft-theme-switch",
+          "motion_tags": ["same-position-replacement", "boundary-reveal"],
           "repository": "video-shotcraft",
           "path": "references/shots/interaction/theme-switch-moves.md",
           "material_types": ["verified-media", "no-material"],
@@ -287,10 +321,11 @@
             "phase_order": ["建立旧状态", "启动替换边界", "逐区替换", "新状态坐实"]
           },
           "license": "Apache-2.0",
-          "status": "port-required"
+          "status": "available"
         },
         {
           "id": "shotcraft-ui-brand-morph",
+          "motion_tags": ["entity-reassembly"],
           "repository": "video-shotcraft",
           "path": "references/shots/outro/ui-to-brand-morph.md",
           "material_types": ["verified-media", "no-material"],
@@ -302,10 +337,11 @@
             "phase_order": ["建立旧实体", "压缩到交换点", "重组新实体", "补全新标识"]
           },
           "license": "Apache-2.0",
-          "status": "port-required"
+          "status": "available"
         },
         {
           "id": "shotcraft-primitive-morph",
+          "motion_tags": ["shape-morph"],
           "repository": "video-shotcraft",
           "path": "references/shots/ui-entrance/morph-from-primitive.md",
           "material_types": ["no-material"],
@@ -317,7 +353,7 @@
             "phase_order": ["建立原始图元", "改变外形", "补充内部元素", "完整对象落定"]
           },
           "license": "Apache-2.0",
-          "status": "port-required"
+          "status": "available"
         }
       ]
     },
@@ -329,7 +365,46 @@
       "local_template_ids": [],
       "external_candidates": [
         {
+          "id": "shotcraft-picker-cycle",
+          "motion_tags": ["sequential-focus"],
+          "repository": "video-shotcraft",
+          "path": "references/shots/interaction/picker-carousel-feature-cycle.md",
+          "material_types": ["verified-media", "no-material", "text-only"],
+          "presentation_types": ["verified-media", "infographic", "text-motion"],
+          "semantic_fit": "一次聚焦一个选项，适合逐个选择，不适合末态全表比较。",
+          "skeleton": {
+            "element_relation": "焦点框固定，列表内容穿过焦点框",
+            "main_motion": "内容逐项滚动、吸附并短暂停顿",
+            "phase_order": ["建立选择器", "滚动到当前项", "吸附停顿", "转到下一项"],
+            "invariants": ["焦点框中心位置保持，列表行高固定"]
+          },
+          "capabilities": {"retains_previous": false, "final_overview": false, "preserves_position": false},
+          "known_limits": ["只允许当前焦点项清晰，周边项变淡且有遮罩", "7 条占位内容不代表 7 条中文已通过容量检查"],
+          "license": "Apache-2.0",
+          "status": "available"
+        },
+        {
+          "id": "shotcraft-source-and-conclusions",
+          "motion_tags": ["source-retention", "progressive-reveal"],
+          "repository": "video-shotcraft",
+          "path": "references/shots/ui-entrance/doc-park-left-pill-deal.md",
+          "material_types": ["verified-media"],
+          "presentation_types": ["verified-media", "infographic"],
+          "semantic_fit": "来源文档驻留，结论逐条出现；不包含从原页选区提取的完整动作。",
+          "skeleton": {
+            "element_relation": "左侧保留部分文档，右侧出现对应结论",
+            "main_motion": "文档左移驻留，结论按旁白顺序逐条落位",
+            "phase_order": ["建立来源", "来源左移", "结论逐项出现", "保留来源与结论清单"],
+            "invariants": ["来源文档身份保持，不凭运动制造选区证据"]
+          },
+          "capabilities": {"retains_source": true, "retains_previous": true, "final_overview": true, "preserves_position": false},
+          "known_limits": ["来源只露部分，原文可读性须按当前材料检查", "字幕逐句退场，结论药丸保留；完整解释不可仅依赖末态"],
+          "license": "Apache-2.0",
+          "status": "available"
+        },
+        {
           "id": "shotcraft-list-reveal",
+          "motion_tags": ["progressive-reveal"],
           "repository": "video-shotcraft",
           "path": "references/shots/ui-entrance/list-reveal.md",
           "material_types": ["no-material", "text-only"],
@@ -340,11 +415,14 @@
             "main_motion": "项目错峰找位，容器持续轻微漂移",
             "phase_order": ["建立主题", "逐项出现", "保持已出现项", "完整清单落定"]
           },
+          "capabilities": {"retains_previous": true, "final_overview": true, "preserves_position": false},
+          "known_limits": ["原演示有容器漂移，不适用于必须固定位置的镜头", "原容器宽 240px，中文容量与项数须重验"],
           "license": "Apache-2.0",
-          "status": "port-required"
+          "status": "available"
         },
         {
           "id": "shotcraft-brace-expand",
+          "motion_tags": ["boundary-expansion", "progressive-reveal"],
           "repository": "video-shotcraft",
           "path": "references/shots/typography/brace-expand.md",
           "material_types": ["text-only"],
@@ -356,10 +434,11 @@
             "phase_order": ["建立符号", "向外展开", "揭示文字", "轻微松弛落定"]
           },
           "license": "Apache-2.0",
-          "status": "port-required"
+          "status": "available"
         },
         {
           "id": "shotcraft-progressive-assemble",
+          "motion_tags": ["layered-assembly", "progressive-reveal"],
           "repository": "video-shotcraft",
           "path": "references/shots/ui-entrance/product-card-progressive-assemble.md",
           "material_types": ["verified-media", "no-material"],
@@ -371,7 +450,7 @@
             "phase_order": ["建立主体", "补充关键字段", "展开细节", "高亮结论"]
           },
           "license": "Apache-2.0",
-          "status": "port-required"
+          "status": "available"
         }
       ]
     }

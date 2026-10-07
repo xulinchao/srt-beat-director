@@ -77,6 +77,13 @@ def design_text(shot: dict) -> str:
         parts.append("关键元素：" + "、".join(str(item) for item in elements))
     if design.get("final_state"):
         parts.append("终态：" + str(design["final_state"]))
+    if design.get("motion_mode"):
+        parts.append("运动方式：" + str(design["motion_mode"]))
+    check = design.get("motion_check") or {}
+    if check:
+        parts.append("验收动作：" + str(check.get("action", "")))
+        parts.append("可见结果：" + str(check.get("visible_result", "")))
+        parts.append("必要状态：" + " → ".join(str(s.get("description", "")) for s in check.get("required_states", [])))
     if shot.get("static_reason"):
         parts.append("保持理由：" + str(shot["static_reason"]))
     return "；".join(parts) or "待补充"

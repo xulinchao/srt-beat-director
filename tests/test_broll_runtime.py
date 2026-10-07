@@ -14,6 +14,7 @@ from broll_runtime import validate_runtime_decision
 from select_broll_template import select
 from validate_plan import validate_broll_structure_variety
 from validate_template_index import validate as validate_templates
+from project_fixtures import bind_preflight
 
 
 class RuntimeDecisionTests(unittest.TestCase):
@@ -105,6 +106,7 @@ class RuntimeDecisionTests(unittest.TestCase):
             "planning/content.json": {"semantic_segments": shots},
             "planning/plan.json": {"shots": shots},
         }
+        bind_preflight(self.root, documents["config/project.json"], documents["planning/preflight.json"])
         for relative, data in documents.items():
             (self.root / relative).write_text(json.dumps(data), encoding="utf-8")
         command = [sys.executable, "-B", str(ROOT / "scripts/validate_plan.py"),
@@ -253,6 +255,7 @@ class RuntimeDecisionTests(unittest.TestCase):
             "planning/plan.json": {"shots": shots},
             "planning/templates.json": {"templates": [{"id": f"template-{runtime}", "runtime": runtime, "animation_status": "animation-verified"} for runtime in ("hyperframes", "remotion")]},
         }
+        bind_preflight(self.root, documents["config/project.json"], documents["planning/preflight.json"])
         for relative, data in documents.items():
             (self.root / relative).write_text(json.dumps(data), encoding="utf-8")
         command = [sys.executable, "-B", str(ROOT / "scripts/validate_plan.py"), "--project", str(self.root / "config/project.json"), "--preflight", str(self.root / "planning/preflight.json"), "--content-analysis", str(self.root / "planning/content.json"), "--visual-plan", str(self.root / "planning/plan.json"), "--template-index", str(self.root / "planning/templates.json"), "--out-dir", str(self.root / "out")]

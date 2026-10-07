@@ -67,6 +67,43 @@ class NarrationBindingTests(unittest.TestCase):
         errors = self.validate()
         self.assertTrue(any("与绑定 cue 原文不一致" in value for value in errors))
 
+    def test_trigger_text_accepts_full_cue_concatenation(self) -> None:
+        self.shot["narration_beats"] = [
+            {
+                "cue_ids": [1, 2],
+                "at_ms": 100,
+                "trigger_text": "先建立主体\n再形成关系",
+                "information_change": "主体与关系一次建立",
+                "state_after": "关系已建立",
+            }
+        ]
+        self.changes = [{"at_ms": 100, "event": "主体与关系一次建立"}]
+        self.assertEqual([], self.validate())
+
+    def test_trigger_text_accepts_single_cue_full_text(self) -> None:
+        self.shot["narration_beats"][0]["trigger_text"] = "先建立主体"
+        self.assertEqual([], self.validate())
+
+    def test_trigger_text_accepts_contiguous_cue_fragment(self) -> None:
+        self.shot["narration_beats"][0]["trigger_text"] = "建立主体"
+        self.shot["narration_beats"][1]["trigger_text"] = "形成关系"
+        self.assertEqual([], self.validate())
+
+    def test_trigger_text_rejects_non_contiguous_splice(self) -> None:
+        self.shot["narration_beats"][0]["trigger_text"] = "先主体"
+        errors = self.validate()
+        self.assertTrue(any("与绑定 cue 原文不一致" in value for value in errors))
+
+    def test_trigger_text_rejects_unrelated_text(self) -> None:
+        self.shot["narration_beats"][0]["trigger_text"] = "完全不同的旁白内容"
+        errors = self.validate()
+        self.assertTrue(any("与绑定 cue 原文不一致" in value for value in errors))
+
+    def test_trigger_text_rejects_empty_value(self) -> None:
+        self.shot["narration_beats"][0]["trigger_text"] = ""
+        errors = self.validate()
+        self.assertTrue(any("与绑定 cue 原文不一致" in value for value in errors))
+
 
 if __name__ == "__main__":
     unittest.main()

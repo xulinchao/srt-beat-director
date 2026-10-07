@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+from broll_retrieval import validate_capabilities
 
 
 CANONICAL_STRUCTURES = {
@@ -76,6 +77,8 @@ def validate(
             if candidate_id in candidate_ids:
                 errors.append(f"外部候选 ID 重复：{candidate_id}")
             candidate_ids.add(candidate_id)
+            if not validate_capabilities(candidate.get("capabilities", {})):
+                errors.append(f"{candidate_id} capabilities 须为约定的布尔型能力字段")
             for key in ("repository", "path", "semantic_fit", "skeleton", "license", "status"):
                 if candidate.get(key) in (None, "", [], {}):
                     errors.append(f"{candidate_id} 缺少 {key}")

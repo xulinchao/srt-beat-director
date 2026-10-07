@@ -62,6 +62,12 @@ def parse_args() -> argparse.Namespace:
         default=45000,
         help="样片结束毫秒；能读到音频时长且小于该值时，自动收敛到音频时长",
     )
+    parser.add_argument(
+        "--repositories-root",
+        type=str,
+        default=None,
+        help="本地参考仓库根目录路径，写入 project.json 的 repositories_root 字段",
+    )
     return parser.parse_args()
 
 
@@ -113,9 +119,19 @@ def main() -> int:
     audio_name = f"narration{audio_suffix}"
     shutil.copy2(args.audio, input_dir / audio_name)
 
+    # --repositories-root: 用户显式提供则转绝对路径；否则推断 Skill 根目录下的 research/reference-repos
+    if args.repositories_root:
+        repositories_root = Path(args.repositories_root).resolve().as_posix()
+    else:
+        inferred = Path(__file__).resolve().parents[1] / "research" / "reference-repos"
+        repositories_root = inferred.as_posix() if inferred.is_dir() else None
+
     project = {
         "schema_version": "0.3",
         "design_contract_version": "1.0",
+        "motion_review_policy": "evidence-first-v1",
+        "sequence_review_policy": "sequence-quality-v1",
+        "sequence_review": {"sample": None, "full": None},
         "project_id": args.project_dir.name,
         "inputs": {"srt": "input/source.srt", "audio": f"input/{audio_name}"},
         "output": {"directory": "render", "filename": "final.mp4"},
@@ -157,6 +173,7 @@ def main() -> int:
             "final": {"sha256": None, "approved_at": None, "review_source": None},
         },
         "final_artifact": None,
+        "repositories_root": repositories_root,
     }
     (config_dir / "project.json").write_text(
         json.dumps(project, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"

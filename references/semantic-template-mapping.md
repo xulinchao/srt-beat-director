@@ -6,9 +6,9 @@
 2. 判断 `screen_role`。讲人、经历、态度和情绪用 A；讲知识增量、证据、关系和步骤用 B。
 3. B-roll 判断 `material_type`：`verified-media`、`no-material` 或 `text-only`。
 4. 判断一个主 `semantic_structure`：`comparison`、`aggregation`、`filtering`、`hierarchy`、`causality`、`replacement`、`expansion`；再用 `semantic_pattern` 描述具体骨架模式。
-5. 先用主体、关系、变化描述检索意图，再用主结构找到候选族，再用具体模式、信息项数量、时长、画幅匹配 `templates/template-index.json`。
-6. 本地没有合适模板时，强制查询 `semantic-template-map.json` 中同结构的外部候选；读取具体镜头卡，`port-required` 候选还要读取实现文件。
-7. 输出候选与最小改造范围，按项目审核模式确认或自检后实现或移植。候选均不适合时必须记录逐项拒绝理由，不能直接从零创建 SVG。
+5. 按 §6 双层策略选型：快路径先查本地认证模板（`template-index.json`）；本地没有时通过 `config/project.json` 的 `repositories_root` 召回参考仓库候选。新程序化 B-roll 按 [表达选型](broll-expression-selection.md) 提供动作简报，跨语义类别查看实际预览与源码；选择器分数只排浏览顺序，确认来源后才算命中。未确认来源时完成外部研究，再决定慢路径静帧布局。
+6. 选定唯一来源与运动方案后，按复杂度复用布局证据或检查必要关键状态，记录 layout_review；多状态镜头带原旁白动态预览，不以终态截图代替运动验收。当前原生快路径支持 Remotion / HyperFrames；Motion Canvas 候选保留其真实框架身份，须另行完成适配与运行校验，不能标为 HyperFrames。
+7. 只有遍历本地模板与参考仓库仍不合适，才允许有证据的自建，须逐项记录实际检查的候选与拒绝理由；目录为空或拒绝两项不代表完成研究。
 
 ## 七类结构的判定边界
 
@@ -22,7 +22,7 @@
 | `replacement` | 同一位置或对象如何从旧状态变成新状态 | 从…变成、替代、升级、切换 | 两个状态需同时比较时改用 `comparison` |
 | `expansion` | 一个概念如何逐项展开 | 包括、分别是、步骤、展开来说 | 多项最终合成一个结果时改用 `aggregation` |
 
-主结构只能有一个；交叉特征写入 `secondary_structures`，不用于第一轮模板检索。`semantic_pattern` 可以自由描述具体关系，但应优先复用已有模板的模式名。无法确定主结构时保持 `unresolved`，不得为了命中模板随意贴标签。
+主结构只能有一个；交叉特征写入 `secondary_structures`，不改变主分类。动作标签可跨这些分类检索。`semantic_pattern` 可以自由描述具体关系，但应优先复用已有模板的模式名。无法确定主结构时保持 `unresolved`，不得为了命中模板随意贴标签。
 
 ## 画面表现与语义结构的关系
 
@@ -39,11 +39,11 @@
 ## 外部候选状态
 
 - `reference-only`：只有镜头配方或演示，必须重新实现。
-- `port-required`：存在源框架源码，尚无合格本地模板。按 [制作工具决策](broll-runtime-selection.md) 选择原生制作或跨框架移植，并验证 seek-safe；该目录状态本身不强制移植。
+- `available`：存在源框架源码；选用前仍须核对动作、许可证、运行路由、目标画幅与 seek-safe。当前 Remotion / HyperFrames 可评估原生制作，Motion Canvas 尚不属于已验证的原生快路径。
 - `structure-study-only`：许可证未确认，只允许抽象研究结构，不能复制源码。
 - `local-template`：已进入本地模板索引，并按索引中的状态判断是否可直接使用。
 
-外部候选不是本地模板。只有完成许可证记录、选定框架的实际渲染、目标画幅与 seek-safe 验证后，才能加入 `templates/template-index.json`，并记录 `runtime` 与 `animation_status`。Remotion 原生效果无需先转成 HyperFrames 才能收录。
+外部候选不是本地模板。只有完成许可证记录、原生框架的实际渲染、目标画幅与 seek-safe 验证后，才能加入 `templates/template-index.json`，并记录 `runtime` 与 `animation_status`。Remotion 原生效果无需先转成 HyperFrames 才能收录。
 
 发布后的 Skill 可先独立校验目录结构，不要求本地存在开发阶段的外部仓库副本：
 

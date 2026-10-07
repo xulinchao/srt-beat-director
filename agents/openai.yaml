@@ -1,4 +1,4 @@
 interface:
-  display_name: "知识 A/B-roll 成片"
-  short_description: "把 SRT、MP3 或现有 ChatCut 项目制作成 A/B-roll 知识视频"
-  default_prompt: "使用 $knowledge-abroll-video，根据我的输入、已有项目和审核授权完成所需阶段：未指定且无已有规格时默认横屏 1920x1080、16:9、30fps；先理解内容并确定 A/B 叙事职责，再设计画面、动作和旁白节拍，逐镜选工具；完整视频默认在 ChatCut 组装并导出，画风取自本片 DESIGN，按实际画面、音画同步与可编辑工程验收。"
+  display_name: "不露脸知识视频导演"
+  short_description: "把 SRT、MP3 或现有 ChatCut 项目制作成画面参与解释的知识视频"
+  default_prompt: "使用 $knowledge-abroll-video，按我的输入、任务范围和已有授权制作知识视频：先确定理解任务，按需选择图解、IP 互动讲解、人物叙事或真实证据，再设计静止、定格或连续动作并逐镜选择工具；沿用当前 DESIGN 和已定规格，无既定规格时默认 16:9、1920x1080、30fps，完整视频在 ChatCut 组装，以实际表达、音画同步和可编辑工程验收。"

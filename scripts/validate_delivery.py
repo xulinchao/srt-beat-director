@@ -14,6 +14,10 @@ from pathlib import Path
 import validate_prompt_usage
 import validate_state
 from media_evidence import probe_video, validate_scan
+from preflight import validate_preflight
+from delivery_evidence import load_timeline_snapshot, validate_manifest, validate_timeline_item
+from validate_plan import validate_units
+from sequence_quality import validate as validate_sequence_quality
 
 
 def parse_args() -> argparse.Namespace:
@@ -70,6 +74,7 @@ def validate(project_dir: Path, prompts_path: Path, mode: str) -> dict:
         "project": project_dir / "config" / "project.json",
         "plan": project_dir / "planning" / "visual-plan.json",
         "preflight": project_dir / "planning" / "preflight-report.json",
+        "content": project_dir / "planning" / "content-analysis.json",
         "timeline_audit": project_dir / "reports" / "timeline-audit.json",
         "qa": project_dir / "reports" / "qa-report.json",
         "manifest": project_dir / "reports" / "manifest.json",
@@ -90,10 +95,42 @@ def validate(project_dir: Path, prompts_path: Path, mode: str) -> dict:
     audit = load(required_paths["timeline_audit"])
     qa = load(required_paths["qa"])
     manifest = load(required_paths["manifest"])
+    errors.extend(validate_preflight(preflight, project, project_dir))
+    cues = (preflight.get("srt") or {}).get("cues") or []
+    validate_units("visual-plan", plan.get("shots") or [], {cue["id"]: cue for cue in cues},
+                   [cue["id"] for cue in cues], errors)
+    validate_units("content-analysis", load(required_paths["content"]).get("semantic_segments") or [],
+                   {cue["id"]: cue for cue in cues}, [cue["id"] for cue in cues], errors)
+    required_files = {path.relative_to(project_dir).as_posix() for key, path in required_paths.items() if key != "manifest"}
+    required_files.update({"config/visual-style.json", "planning/content-analysis.json", "planning/visual-plan-prompt.json"})
+    required_files.update(value for value in (project.get("inputs") or {}).values() if isinstance(value, str))
+    sequence_report = validate_sequence_quality(project_dir, "delivery", plan=plan, project=project)
+    errors.extend(sequence_report["errors"])
+    warnings.extend(sequence_report["warnings"])
+    required_files.update(sequence_report["files"])
+    sample_approval = (project.get("approvals") or {}).get("sample") or {}
+    for reference in (sample_approval.get("dependencies"), qa.get("frame_scan")):
+        if isinstance(reference, dict) and isinstance(reference.get("path"), str):
+            required_files.add(reference["path"])
+    if isinstance(sample_approval.get("artifact"), str):
+        required_files.add(sample_approval["artifact"])
+    snapshot_ref = sample_approval.get("dependencies") or {}
+    if snapshot_ref.get("path"):
+        try:
+            dependencies = load(project_dir / snapshot_ref["path"]).get("dependencies") or {}
+            required_files.update(entry["path"] for entry in dependencies.get("files", []))
+        except (OSError, ValueError, KeyError, TypeError) as exc:
+            errors.append(f"样片依赖清单不可读取：{exc}")
 
     prompt_report = validate_prompt_usage.validate(project_dir, prompts_path, "produced")
     if prompt_report.get("status") != "pass":
         errors.extend(f"提示词生产证据：{value}" for value in prompt_report.get("errors") or [])
+    for relative in prompt_report.get("checked_records") or []:
+        required_files.add(relative)
+        record = load(project_dir / relative)
+        archived = ((record.get("prompt_binding") or {}).get("source_snapshot") or {}).get("path")
+        if archived:
+            required_files.add(archived)
 
     project_artifact = final_artifact_from(project, "config/project.json", errors)
     qa_artifact = final_artifact_from(qa, "reports/qa-report.json", errors)
@@ -104,6 +141,8 @@ def validate(project_dir: Path, prompts_path: Path, mode: str) -> dict:
             errors.append(f"final_artifact.{key} 在 project、QA 与 manifest 中不一致")
 
     final_path = project_path(project_dir, manifest_artifact.get("path"))
+    if manifest_artifact.get("path"):
+        required_files.add(manifest_artifact["path"])
     if not final_path.is_file():
         errors.append(f"最终 MP4 不存在：{final_path}")
     else:
@@ -175,6 +214,10 @@ def validate(project_dir: Path, prompts_path: Path, mode: str) -> dict:
     timeline = audit.get("timeline") or {}
     manifest_chatcut = manifest.get("chatcut") or {}
     expected_timeline_id = str(project_artifact.get("timeline_id") or "")
+    snapshot_items, snapshot_errors = load_timeline_snapshot(
+        project_dir, audit.get("source_snapshot"), project,
+        str(project_artifact.get("sha256") or ""), required_files)
+    errors.extend(snapshot_errors)
     if project.get("primary_timeline") == "chatcut":
         for label, value in (
             ("project.chatcut.timeline_id", chatcut.get("timeline_id")),
@@ -221,6 +264,25 @@ def validate(project_dir: Path, prompts_path: Path, mode: str) -> dict:
 
         record_path = prompt_record_path(project_dir, shot)
         record = load(record_path) if record_path.is_file() else {}
+        required_files.add(record_path.relative_to(project_dir).as_posix())
+        for value in record.get("artifacts") or []:
+            required_files.add(value.get("path") if isinstance(value, dict) else value)
+        if record.get("selection_report"):
+            required_files.add(record["selection_report"])
+        if shot.get("broll_research_record"):
+            required_files.add(shot["broll_research_record"])
+        layout = record.get("layout_review") or {}
+        required_files.update(layout.get("artifacts") or [])
+        if layout.get("dynamic_preview"):
+            required_files.add(layout["dynamic_preview"])
+        production = shot.get("production") or {}
+        source_files = production.get("source_files") or []
+        if not isinstance(source_files, list) or any(not isinstance(v, str) or not v for v in source_files):
+            errors.append(f"{shot_id} production.source_files 必须为非空路径字符串数组")
+            source_files = []
+        if production.get("primary_tool") in {"hyperframes", "remotion"} and not source_files:
+            errors.append(f"{shot_id} 程序化镜头缺少 production.source_files 源工程文件")
+        required_files.update(source_files)
         sequence_key = "action_sequence" if shot.get("screen_role") == "A" else "motion_sequence"
         produced_beats = (record.get(sequence_key) or {}).get("beats") or []
         for position, planned in enumerate(planned_beats, start=1):
@@ -239,9 +301,13 @@ def validate(project_dir: Path, prompts_path: Path, mode: str) -> dict:
                 errors.append(f"{beat_label} 未在一个时间线帧内绑定旁白节拍")
             evidence = actual.get("evidence") or {}
             timeline_items = evidence.get("timeline_items") or []
+            if evidence.get("artifact"):
+                required_files.add(evidence["artifact"])
             if not timeline_items:
                 errors.append(f"{beat_label} 缺少 timeline_items")
             for item in timeline_items:
+                errors.extend(f"{beat_label} {message}" for message in validate_timeline_item(
+                    project_dir, item, evidence, timeline_at_ms, snapshot_items, fps))
                 if not str(item.get("item_id") or "").strip():
                     errors.append(f"{beat_label} timeline item 缺少 item_id")
                 if project.get("primary_timeline") == "chatcut" and not str(item.get("asset_id") or "").strip():
@@ -274,6 +340,8 @@ def validate(project_dir: Path, prompts_path: Path, mode: str) -> dict:
             errors.append("最终批准缺少有效 review_source")
         if source == "agent-qa-under-user-authorization" and project.get("review_mode") != "continuous":
             errors.append("代理最终批准只允许用于 continuous review_mode")
+
+    errors.extend(validate_manifest(project_dir, manifest, required_files))
 
     return {
         "schema_version": "0.3",
@@ -318,7 +386,7 @@ def main() -> int:
     args = parse_args()
     try:
         report = validate(args.project_dir, args.production_prompts, args.mode)
-    except (OSError, json.JSONDecodeError, ValueError) as exc:
+    except (OSError, json.JSONDecodeError, ValueError, TypeError, KeyError, AttributeError) as exc:
         print(str(exc), file=sys.stderr)
         return 2
     args.out_dir.mkdir(parents=True, exist_ok=True)

@@ -18,6 +18,48 @@ def digest(path: Path) -> str:
     return value.hexdigest()
 
 
+def probe_source_duration(path: Path) -> float:
+    executable = shutil.which("ffprobe")
+    if not executable:
+        raise ValueError("未找到 ffprobe，无法核验连续动画证据")
+    result = subprocess.run(
+        [executable, "-v", "error", "-show_entries", "stream=codec_type,duration:stream_disposition=attached_pic:format=duration",
+         "-of", "json", str(path)],
+        capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=60,
+    )
+    if result.returncode or result.stderr.strip():
+        raise ValueError(f"连续动画素材不可探测：{result.stderr.strip()[:500]}")
+    data = json.loads(result.stdout)
+    videos = [s for s in data.get("streams", []) if s.get("codec_type") == "video"
+              and not s.get("disposition", {}).get("attached_pic")]
+    if len(videos) != 1:
+        raise ValueError("连续动画证据必须是包含单个视频流的素材")
+    value = videos[0].get("duration")
+    if value in (None, "N/A"):
+        value = data.get("format", {}).get("duration")
+    duration = float(value) * 1000
+    if not math.isfinite(duration) or duration <= 0:
+        raise ValueError("连续动画素材时长无效")
+    return duration
+
+
+def validate_source_time(path: Path, at_ms: object, cache: dict) -> list[str]:
+    if type(at_ms) is not int or at_ms < 0:
+        return ["连续动画证据需要非负整数 artifact_time_ms"]
+    key = path.resolve()
+    if key not in cache:
+        try:
+            cache[key] = probe_source_duration(path)
+        except (OSError, ValueError, TypeError, subprocess.SubprocessError) as exc:
+            cache[key] = str(exc)
+    duration = cache[key]
+    if isinstance(duration, str):
+        return [f"连续动画证据无法验证：{duration}"]
+    if at_ms >= duration:
+        return [f"artifact_time_ms={at_ms} 超出素材时长 {duration}ms"]
+    return []
+
+
 def probe_video(path: Path) -> dict:
     executable = shutil.which("ffprobe")
     if not executable:
@@ -56,6 +98,25 @@ def probe_video(path: Path) -> dict:
         "audio_streams": len(audios), "codec": stream.get("codec_name"),
         "audio_durations_ms": [float(s["duration"]) * 1000 for s in audios if s.get("duration") not in (None, "N/A")],
     }
+
+
+def probe_still(path: Path) -> None:
+    """Decode a real single-frame image; a renamed video or empty file is not a still."""
+    executable = shutil.which("ffprobe")
+    if not executable:
+        raise ValueError("未找到 ffprobe，无法核验静帧证据")
+    result = subprocess.run(
+        [executable, "-v", "error", "-count_frames", "-show_entries",
+         "stream=codec_name,width,height,nb_read_frames", "-of", "json", str(path)],
+        capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=60,
+    )
+    if result.returncode or result.stderr.strip():
+        raise ValueError("静帧证据无法解码")
+    streams = json.loads(result.stdout).get("streams", [])
+    if (len(streams) != 1 or streams[0].get("codec_name") not in {"png", "mjpeg", "webp", "bmp", "tiff", "gif"}
+            or int(streams[0].get("nb_read_frames", 0)) != 1
+            or streams[0].get("width", 0) <= 0 or streams[0].get("height", 0) <= 0):
+        raise ValueError("静帧证据必须为可解码的单帧图片；视频证据须填写时间点")
 
 
 def validate_scan(project_dir: Path, reference: object, final_path: Path, media: dict) -> list[str]:

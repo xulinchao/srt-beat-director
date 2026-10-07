@@ -44,7 +44,7 @@
 
 这是设计候选，不新增 semantic_structure 枚举；继续用既有七类，细分写入 semantic_pattern 和 visual_structure。桥、天平、雷达仅在隐喻准确时采用，不作为必用模板。
 
-允许核心图跨段发展、同维度案例重复比较、结尾回顾原图。对照最近三个 B-roll 是提醒窗口，不是禁止重复的门槛。复用时在 broll_structure_exceptions 记录对应镜头、semantic_reason、visible_difference；后者可描述新增节点、重点变化或“布局保持不变，用于回顾已讲结论”，不强制换布局。跨更长区间的回顾也记录。机械换字换色却没有解释收益应返工，不能靠填字段代替视觉判断。
+允许核心图跨段发展、同维度案例重复比较、结尾回顾原图。对照最近三个 B-roll，审查复用的解释收益，不以重复本身否决；详见 SKILL.md「核心制作约束」。复用时在 broll_structure_exceptions 记录对应镜头、semantic_reason、visible_difference；后者可描述新增节点、重点变化或“布局保持不变，用于回顾已讲结论”，不强制换布局。跨更长区间的回顾也记录。机械换字换色却没有解释收益应返工，不能靠填字段代替视觉判断。
 
 ## 节奏、参考和验收
 
