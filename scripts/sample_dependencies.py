@@ -9,6 +9,7 @@ from pathlib import Path
 from media_evidence import digest
 from validate_design import spec
 from sequence_quality import POLICY as SEQUENCE_POLICY, validate as validate_sequence_quality
+from visual_timing import display_ranges
 
 
 def load(path: Path) -> dict:
@@ -67,9 +68,9 @@ def current_dependencies(root: Path, schema_version: str = "1.0") -> dict:
     selected = []
     scoped_shots = []
     shots = plan.get("shots") or []
+    ranges = display_ranges(shots, end)
     for index, shot in enumerate(shots):
-        display_start = 0 if index == 0 else shot["start_ms"]
-        display_end = shots[index + 1]["start_ms"] if index + 1 < len(shots) else end
+        display_start, display_end = ranges[index]
         if display_start >= end or display_end <= start:
             continue
         selected.append(shot["id"])

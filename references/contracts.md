@@ -209,14 +209,14 @@ python scripts/validate_references.py \
 
 ## 5. `visual-plan.json` 最小字段
 
-`planning/visual-plan.json` 是镜头和时间的机器真源，但不能替代对用户的可读交付。由它生成的 `planning/visual-plan.md` 必须包含且只能以如下七列作为视觉编排表主体：
+`planning/visual-plan.json` 是镜头和时间的机器真源，但不能替代对用户的可读交付。由它生成的 `planning/visual-plan.md` 必须包含且只能以如下八列作为视觉编排表主体：
 
 ```markdown
-| 镜头 | 时间 | 配音文案 | 画面类型 | 画面设计 | 动态变化 | 画面衔接 |
-|---|---|---|---|---|---|---|
+| 镜头 | 时间 | 配音文案 | A-roll / B-roll | 画面类型 | 画面设计 | 动态变化 | 画面衔接 |
+|---|---|---|---|---|---|---|---|
 ```
 
-其中“画面类型”使用用户可读的五类名称：`人物画面`、`场景画面`、`真实素材`、`信息图形`、`文字动效`；A/B 职责、素材子类型、语义结构、工具和风险保留在 JSON 或表格后的补充检查中。保持七列表格稳定，表格之后增加由 JSON 派生的“逐镜制作路由”表，逐镜列出 A/B 职责、动效方式、主制作工具和工具决策依据/辅助链路；不能只在计划 JSON 中隐藏工具选择。镜头 ID 必须从 `S001` 连续递增，时间必须显示为毫秒，配音文案必须来自 `verbatim_text`，不得改写。路由表之后固定输出“需要补充的素材”“需要确认的视觉方向”“制作难度较高的镜头”三个部分；无内容时写“无”。
+其中“画面类型”使用用户可读的五类名称：`人物画面`、`场景画面`、`真实素材`、`信息图形`、`文字动效`；“A-roll / B-roll”列从 screen_role 派生：A 显示 A-roll，B 显示 B-roll；素材子类型、语义结构、工具和风险保留在 JSON 或补充检查中。保持八列表格稳定，表格之后增加由 JSON 派生的“逐镜制作路由”表，逐镜列出 A/B 职责、动效方式、主制作工具和工具决策依据/辅助链路；不能只在计划 JSON 中隐藏工具选择。镜头 ID 必须从 `S001` 连续递增，时间必须显示为毫秒，配音文案必须来自 `verbatim_text`，不得改写。路由表之后固定输出“需要补充的素材”“需要确认的视觉方向”“制作难度较高的镜头”三个部分；无内容时写“无”。
 
 ```json
 {
@@ -278,6 +278,32 @@ python scripts/validate_references.py \
 
 `screen_role` 只允许 `A` 或 `B`。A 的子类型由项目级主画面模式约束；B 的 `material_type` 使用 `verified-media`、`no-material` 或 `text-only`，`presentation_type` 使用 `verified-media`、`infographic`、`text-motion` 或 `scene`。生成式解释场景使用 `material_type=no-material`、`presentation_type=scene`、`screen_subtype=scene`，`template_id` 可为 null；生成素材不能标为 verified-media。生成场景保留理解点、语义结构、状态节拍及生成证据，不强制走代码模板研究门。旧字段 `screen_subtype` 只保留画面实现类别，不能代替这两个映射字段。`start_ms` 和 `end_ms` 必须来自 SRT 边界。
 
+### 视觉切点与语义时间
+
+`start_ms/end_ms`、`cue_ids`、`changes.at_ms` 与 `narration_beats.at_ms` 保留原规则。可在**后一镜**的 `transition.visual_cut` 登记进入该镜的视觉切点，一个接缝只有这一份数值真源；上一镜退出时间由它派生，不另设独立出点。
+
+```json
+"transition": {
+  "from_previous": "从桥的全景进入结构特写",
+  "to_next": "保留承重部件的位置",
+  "visual_cut": {
+    "offset_ms": -250,
+    "reason": "先认出桥，再听结构解释",
+    "bridge": "提前只见桥体；名称与承重标记仍按原旁白节拍出现，前镜结论已读完"
+  }
+}
+```
+
+- `offset_ms` 为整数毫秒，相对本镜 `start_ms`；负数提前进入，正数延后进入（前镜延后退出），零为显式同步切。声明时 `reason`、`bridge` 必须为非空字符串，分别说明语义理由及交接期间看见什么、怎样保护阅读与信息触发。
+- 未声明时沿用原切点和空隙保持策略；首镜禁止声明，从第 0 帧开始；末镜保持到音频/实际解码终点。旧任务不自动添加字段或迁移批准。
+- 实际切点为 `start_ms + offset_ms`，各镜显示区间由相邻切点共同派生，必须顺序连续、在总时长内且帧量化后至少一帧；区间采用左闭右开。毫秒与帧两层都须覆盖受影响镜头的全部旁白节拍。延后切入不能遮掉本镜首个节拍，提前切入不能截去前镜末个节拍；禁止移动、删减或伪造节拍来通过检查。
+- 提前进入只用于环境、对象或预备状态，不能提前揭示答案/数字/结论。延后退出只用于已完成结果、证据阅读或反应；若新句一开口就需要新画面，应同步切或提前切。阅读保持、动作完成和语义误导仍由实际 QA 判断。
+- 八列表格“时间”列仍显示语义边界；“画面衔接”从 JSON 派生实际切入毫秒、偏移、理由和交接画面。不要把视觉切点写回 SRT 或语义边界。
+- 本字段定义完整画面的交接时刻，不授权跨镜素材重叠；叠化等混合须在各自显示范围内预制并验收。资产需要覆盖实际显示区间，提前段准备素材头部、延后段准备可用尾部；不能直接平移整段动画导致内部节拍漂移。
+- 修改切点使受影响的计划、样片、资产映射与审阅记录失效，按现有依赖重新核验；相邻镜头即使语义起点不在样片内，也可能因提前进入而纳入样片。共享计算见 `scripts/visual_timing.py`。
+
+### 制作路由与镜头字段
+
 `production` 记录计划如何落实，不替代画面语义字段：
 
 逐镜制作路由表按 JSON 核对职责、动效方式和主工具。缺少 `motion_intent` 且没有 `static_reason`，或没有 `primary_tool` 时，渲染出的占位说明不能通过 Markdown 校验。旧计划按需补齐真实设计意图并重生视图，不改历史批准或伪造生成记录。
@@ -288,7 +314,7 @@ python scripts/validate_references.py \
 - `asset_gap`：没有缺口时为 `null`，有缺口时写清缺少什么、为什么无法继续该镜头和是否影响全片导出。
 - `video_generation`：ComfyUI 视频镜头的 workflow、首帧、尾帧（fl2v 必填）、运动提示词、输出规格、任务 ID、输出路径和实际帧证据；字段契约见 [comfyui-video-production.md](comfyui-video-production.md)。
 - `image_generation`：ComfyUI 本地图片镜头的 workflow、输入图或 mask、提示词、seed、输出路径和结果证据；字段契约见 [comfyui-image-production.md](comfyui-image-production.md)。
-- 新制计划的每镜都在 `visual_design.motion_intent` 说明运动方式（定格状态序列、生成式连续动作、程序化信息动效或有理由的静止）、旁白触发点及停留/转变；定格动画写明状态图和跳变节奏。`production.primary_tool` 必须逐镜明确，七列表格后的路由表从该字段派生。H3 生成的视频镜头沿用已确定的 `screen_role`，A/B 均可使用；其首尾帧、workflow、运动提示、任务与成片路径写入 `production.video_generation`；其他工具链只作为该镜生成素材或渲染的实现步骤，不能因此改变 ChatCut 主时间线。
+- 新制计划的每镜都在 `visual_design.motion_intent` 说明运动方式（定格状态序列、生成式连续动作、程序化信息动效或有理由的静止）、旁白触发点及停留/转变；定格动画写明状态图和跳变节奏。`production.primary_tool` 必须逐镜明确，八列表格后的路由表从该字段派生。H3 生成的视频镜头沿用已确定的 `screen_role`，A/B 均可使用；其首尾帧、workflow、运动提示、任务与成片路径写入 `production.video_generation`；其他工具链只作为该镜生成素材或渲染的实现步骤，不能因此改变 ChatCut 主时间线。
 - 完整新制视频的 `primary_timeline` 默认 `chatcut`，例外条件见配置章节。`no-material + infographic` B-roll 可按逐镜计划使用 `hyperframes`、`remotion`、`chatcut-motion-graphics` 或合适的 H3 视频生成工具；HyperFrames/Remotion 的代码动效新制默认 HyperFrames，成熟模板可原生复用。A/B 两类镜头使用这两种代码框架时都必须填写 `production.runtime_decision`，字段和决策规则以 [制作工具决策](broll-runtime-selection.md) 为准。无论单镜工具如何选择，ChatCut 统一管理素材、字幕、声音、组装主时间线与导出。
 
 连续三镜以上同一 `screen_role` 时，在计划根节点增加 `roll_run_exceptions`，逐段记录 `start_shot_id`、`end_shot_id`、`screen_role` 与非空 `reason`。理由必须说明为什么语义不可拆，以及连续镜头如何改变视角或信息结构；不能只写“节奏需要”。
@@ -296,7 +322,7 @@ python scripts/validate_references.py \
 - A-roll 固定人物模式必须使用 `a_view`：`presenter`、`protagonist`、`supporting`、`first-person`；
 - 所有镜头的 `changes` 与 `narration_beats` 按顺序一一对应。每个 beat 的 `cue_ids` 必须属于当前镜头，`at_ms` 等于首个绑定 cue 的开始时间，`trigger_text` 逐字来自绑定 cue 的连续原文（可以是所有绑定 cue 的全文拼接，也可以是其中一个 cue 的连续片段）；不得事后凭感觉填写任意时间点，也不得跳词拼接非连续文本；
 - A-roll 至少 1 个旁白语义节拍，数量不由时长决定。旁白节拍数量不等于动作状态数量：一个节拍可以包含进入、操作、接触和停住。仅选择 single-state 的静止实现必须填写非空 shot.static_reason；changes 与 narration_beats 仍保留对应的建立状态。显式运动方式与状态证据见 §10，装饰运动不计作叙事变化；
-- static_reason 是镜头级条件必填字符串，七列表格在画面设计中显示。旧单状态计划需根据实际语义补写、重生 Markdown 并复核受影响审批；不得仅为通过校验复制空泛理由，也不自动批改历史工作区。生产提示词更新后按 §8 重建实际需要重新执行的实例，不替换旧哈希冒充已执行；
+- static_reason 是镜头级条件必填字符串，八列表格在画面设计中显示。旧单状态计划需根据实际语义补写、重生 Markdown 并复核受影响审批；不得仅为通过校验复制空泛理由，也不自动批改历史工作区。生产提示词更新后按 §8 重建实际需要重新执行的实例，不替换旧哈希冒充已执行；
 - B-roll 的有效阶段数服从已经批准的 `narration_beats`，每个阶段负责一次信息建立、关系改变、重点确认或结论落定；额外入场和尾部阅读保持不写成旁白节拍；
 - B-roll 必须填写 `material_type`、`presentation_type`、`semantic_structure` 与正整数 `item_count`；
 - `semantic_structure` 只允许 `comparison`、`aggregation`、`filtering`、`hierarchy`、`causality`、`replacement`、`expansion`；交叉特征写入可选的 `secondary_structures`；
@@ -413,7 +439,7 @@ ChatCut 路径的 manifest 还要记录项目 ID、成片时间线 ID、导出�
 }
 ```
 
-`timeline_at_ms` 与计划 `at_ms` 的误差不得超过 `1000/fps` 毫秒，不使用成片总时长的 50ms 下限。`timeline_range_frames` 和素材实例 `range_frames` 均为零起点、左闭右开的整数帧区间。边界按 `floor(ms*fps/1000+0.5)` 换算：首镜从第 0 帧开始，镜头保持到下一镜语义起点，末镜到实际解码总帧数，以落实空隙保持策略。每个实例范围须在当前镜头范围内并覆盖该 beat 的实际时间点；镜头级范围记录完整画面，实例级范围记录本节拍真正使用的资产，不能填计划范围冒充实测。`evidence.artifact` 和 `artifact_time_ms` 必须与逐镜提示词实例中的同序节拍一致。ChatCut 路径的每个节拍至少包含一个真实 `item_id` 与 `asset_id`；本地文件存在但没有进入成片时间线不算 `covered`。
+`timeline_at_ms` 与计划 `at_ms` 的误差不得超过 `1000/fps` 毫秒，不使用成片总时长的 50ms 下限。`timeline_range_frames` 和素材实例 `range_frames` 均为零起点、左闭右开的整数帧区间。边界按 `floor(ms*fps/1000+0.5)` 换算：首镜从第 0 帧开始，镜头保持到下一镜实际视觉切点（未声明 visual_cut 时为下一镜语义起点），末镜到实际解码总帧数；切点按 §5 派生并落实空隙保持策略。每个实例范围须在当前镜头范围内并覆盖该 beat 的实际时间点；镜头级范围记录完整画面，实例级范围记录本节拍真正使用的资产，不能填计划范围冒充实测。`evidence.artifact` 和 `artifact_time_ms` 必须与逐镜提示词实例中的同序节拍一致。ChatCut 路径的每个节拍至少包含一个真实 `item_id` 与 `asset_id`；本地文件存在但没有进入成片时间线不算 `covered`。
 
 ### 独立时间线证据
 
@@ -593,7 +619,7 @@ python scripts/validate_delivery.py \
 {"dependencies": {"path": "preview/sample-dependencies-v2.json", "sha256": "实际快照哈希"}}
 ```
 
-用 `scripts/sample_dependencies.py` 生成快照，随后按真实 QA 结果批准；生成快照本身不批准样片。新快照使用 `schema_version="2.0"`，绑定样片路径与哈希，并保存 `dependencies.settings`、`shot_ids`、`files[{path,sha256}]` 和 `plan_scope`。计划分区保存所有非 shots 根字段（未知字段保守地视为共用规则），以及覆盖样片区间的完整镜头对象与裁切后的 `display_range_ms`，包含首镜补前空隙、镜间保持和尾镜保持。仅区间外镜头变化或计划 JSON 排版变化不会作废样片；镜头移动进入样片、区间内设计/节拍/边界变化仍失效。共用输入 SRT/音频、视觉规范、候选审阅、人物规范与参考索引、DESIGN 及账号规范/字体/样张仍整体绑定；区间内的提示词原文快照、输出、源工程、选择/研究与布局检查证据逐文件绑定。配置只绑定输入、规格、样片区间、时间线策略、字幕区、主模式和主时间线，避免把审批本身纳入哈希形成循环。
+用 `scripts/sample_dependencies.py` 生成快照，随后按真实 QA 结果批准；生成快照本身不批准样片。新快照使用 `schema_version="2.0"`，绑定样片路径与哈希，并保存 `dependencies.settings`、`shot_ids`、`files[{path,sha256}]` 和 `plan_scope`。计划分区保存所有非 shots 根字段（未知字段保守地视为共用规则），以及覆盖样片区间的完整镜头对象与裁切后的 `display_range_ms`，包含首镜补前空隙、镜间保持、尾镜保持及 visual_cut 派生范围。仅区间外镜头变化或计划 JSON 排版变化不会作废样片；镜头移动进入样片、区间内设计/节拍/边界变化仍失效。共用输入 SRT/音频、视觉规范、候选审阅、人物规范与参考索引、DESIGN 及账号规范/字体/样张仍整体绑定；区间内的提示词原文快照、输出、源工程、选择/研究与布局检查证据逐文件绑定。配置只绑定输入、规格、样片区间、时间线策略、字幕区、主模式和主时间线，避免把审批本身纳入哈希形成循环。
 
 旧 `1.0` 快照继续绑定完整计划，不自动迁移、重写哈希或批准记录。切换到 2.0 时先真实复核再用新文件保存快照。全片计划批准仍绑定完整计划；区间外变更需复核计划批准，但无需因此重复批准未受影响的 2.0 样片。最终成片和工程快照仍绑定完整计划，不缩小交付检查范围。
 
@@ -646,7 +672,7 @@ python scripts/validate_delivery.py \
 }
 ```
 
-这是新增字段示例，其他必填字段仍按 §5。七列表格从 JSON 同步展示运动方式、验收动作、结果和必要状态。
+这是新增字段示例，其他必填字段仍按 §5。八列表格从 JSON 同步展示运动方式、验收动作、结果和必要状态。
 
 ### 10.2 候选与批准
 
@@ -705,7 +731,7 @@ python scripts/validate_visual_review.py --project-dir <project> --review <proje
 
 ### 样片/整片连续审阅
 
-审阅结构如下。哈希来自实际文件；`plan_scope_sha256`由`scripts/sequence_quality.py`的`scope_hash(plan,shot_ids)`计算，绑定计划公共字段及范围内镜头。`plan_snapshot`为审阅当时计划的不可变副本，scope_hash也须与当前范围相同。区间外镜头改变不使未受影响样片自动过期；DESIGN、原旁白、SRT、公共规则或区间内镜头改变需要复核。
+审阅结构如下。哈希来自实际文件；`plan_scope_sha256`由`scripts/sequence_quality.py`的`scope_hash(plan,shot_ids)`计算，绑定计划公共字段、范围内镜头，以及决定这些镜头退出时间的范围外下一镜 visual_cut（若声明，连同该镜 start_ms）。`plan_snapshot`为审阅当时计划的不可变副本，scope_hash也须与当前范围相同。区间外镜头改变不使未受影响样片自动过期；DESIGN、原旁白、SRT、公共规则或区间内镜头改变需要复核。
 
 ```json
 {

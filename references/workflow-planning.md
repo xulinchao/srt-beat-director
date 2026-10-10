@@ -31,13 +31,13 @@
 
 提取主题、主张、章节、论证、情绪和结论，合并相邻字幕为完整语义段，写清观众理解点和未经原文支持的推断，保存内容分析。仅要求分析时在此交付；需要分镜时再使用 `visual-plan-v1`，保存 `planning/visual-plan-prompt.json` 并生成 `planning/visual-plan.json`。
 
-每镜记录 A/B 职责、表现形式、构图、有效变化、衔接、来源、`visual_design.motion_intent`（动效方式及旁白触发/停留节奏）、`production.primary_tool`（该镜最终视觉资产的制作工具）、回退和素材缺口；`changes` 与 `narration_beats` 一一对应，节拍绑定原始 cue 起点与 cue 原文连续片段。工具须在分镜阶段逐镜确定并写入 JSON，在七列表格之后的“逐镜制作路由”表中可读呈现。A/B 职责由叙事用途确定，H3、HyperFrames、Remotion 均不自动决定镜头职责；若以首尾帧驱动，首帧、尾帧、H3 workflow 和运动提示分别记录。程序化信息图 B-roll 选型按上表读取引用，新计划标记 `broll_matching_policy="expression-first-v1"` 与 `broll_layout_policy="motion-first-v1"`，先用 `validate_template_index.py`、`validate_semantic_map.py` 检查当前索引与语义目录，再将动作简报通过 `--expression-brief` 传入 `select_broll_template.py`，保存逐镜选择报告，确定 `semantic_structure`、具体 `visual_structure`、`semantic_pattern`、`item_count`、模板和工具；选择时列出最近三个 B-roll 的结构签名并完成复用审查，需要外部研究时先完成研究记录与校验。尚未解决的项留在草稿或素材请求中，不伪造通过。
+每镜记录 A/B 职责、表现形式、构图、有效变化、衔接、来源、`visual_design.motion_intent`（动效方式及旁白触发/停留节奏）、`production.primary_tool`（该镜最终视觉资产的制作工具）、回退和素材缺口；`changes` 与 `narration_beats` 一一对应，节拍绑定原始 cue 起点与 cue 原文连续片段。工具须在分镜阶段逐镜确定并写入 JSON，在八列表格之后的“逐镜制作路由”表中可读呈现。A/B 职责由叙事用途确定，H3、HyperFrames、Remotion 均不自动决定镜头职责；若以首尾帧驱动，首帧、尾帧、H3 workflow 和运动提示分别记录。程序化信息图 B-roll 选型按上表读取引用，新计划标记 `broll_matching_policy="expression-first-v1"` 与 `broll_layout_policy="motion-first-v1"`，先用 `validate_template_index.py`、`validate_semantic_map.py` 检查当前索引与语义目录，再将动作简报通过 `--expression-brief` 传入 `select_broll_template.py`，保存逐镜选择报告，确定 `semantic_structure`、具体 `visual_structure`、`semantic_pattern`、`item_count`、模板和工具；选择时列出最近三个 B-roll 的结构签名并完成复用审查，需要外部研究时先完成研究记录与校验。尚未解决的项留在草稿或素材请求中，不伪造通过。
 
 新任务按数据契约 §10 声明 `motion_review_policy=evidence-first-v1`、代表镜头和每镜运动方式；非静止镜头写清可见动作、结果及必要状态。同一旁白节拍可含多个动作状态，不能因字幕少而改为静止。
 
 启用`sequence_review_policy=sequence-quality-v1`时，在计划根节点填写`sequence_direction`；每镜`production.assembly_tool`与主工程一致。非静止程序化镜头或`custom_motion=true`的镜头声明`motion_reference_review`，参考要求覆盖A/B、真实照片和场景自制动效，不只覆盖无素材信息图。字段与复用边界见契约 §11。
 
-生成可审阅的七列表格：`镜头 | 时间 | 配音文案 | 画面类型 | 画面设计 | 动态变化 | 画面衔接`。编号从 `S001` 连续递增，时间用原始边界毫秒值，配音逐字保留。表后列出“需要补充的素材”“需要确认的视觉方向”“制作难度较高的镜头”，没有则写“无”。
+生成可审阅的八列表格：`镜头 | 时间 | 配音文案 | A-roll / B-roll | 画面类型 | 画面设计 | 动态变化 | 画面衔接`。编号从 `S001` 连续递增，时间列用原始语义边界毫秒值，配音逐字保留。逐个接缝按 [导演规则](directing.md#切点与声音错开) 判断是否错开；需要时在后一镜 `transition.visual_cut` 登记偏移、理由与交接画面，“画面衔接”栏派生实际切点，不能只写在自然语言中。表后列出“需要补充的素材”“需要确认的视觉方向”“制作难度较高的镜头”，没有则写“无”。
 
 ```text
 python scripts/validate_plan.py --preflight <project>/planning/preflight-report.json --project <project>/config/project.json --content-analysis <project>/planning/content-analysis.json --visual-plan <project>/planning/visual-plan.json --out-dir <project>/planning

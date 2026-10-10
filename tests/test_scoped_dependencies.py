@@ -68,6 +68,30 @@ class ScopedSampleTests(unittest.TestCase):
         self.assertEqual(after["shot_ids"], ["S001", "S002"])
         self.assertNotEqual(before, after)
 
+    def test_visual_lead_enters_sample_without_changing_semantic_start(self):
+        self.plan["shots"][1]["start_ms"] = 2200
+        self.write("planning/visual-plan.json", self.plan)
+        before = current_dependencies(self.root, "2.0")
+        self.plan["shots"][1]["transition"] = {"visual_cut": {
+            "offset_ms": -400, "reason": "预备观察", "bridge": "先见对象"}}
+        self.write("planning/visual-plan.json", self.plan)
+        self.write("prompts/b-scenes/S002.json", {"artifacts": ["assets/state.png"]})
+        after = current_dependencies(self.root, "2.0")
+        self.assertEqual(["S001", "S002"], after["shot_ids"])
+        self.assertEqual([1800, 2000], after["plan_scope"]["shots"][1]["display_range_ms"])
+        self.assertNotEqual(before, after)
+
+    def test_visual_tail_keeps_previous_shot_inside_sample(self):
+        self.project["sample"] = {"start_ms": 3100, "end_ms": 4000}
+        self.plan["shots"][1]["transition"] = {"visual_cut": {
+            "offset_ms": 250, "reason": "读完结果", "bridge": "引导语期间保持结果"}}
+        self.write("config/project.json", self.project)
+        self.write("planning/visual-plan.json", self.plan)
+        self.write("prompts/b-scenes/S002.json", {"artifacts": ["assets/state.png"]})
+        after = current_dependencies(self.root, "2.0")
+        self.assertEqual(["S001", "S002"], after["shot_ids"])
+        self.assertEqual([3100, 3250], after["plan_scope"]["shots"][0]["display_range_ms"])
+
     def test_dict_artifact_and_source_are_bound(self):
         self.record["artifacts"] = [{"path": "assets/state.png"}]
         self.plan["shots"][0]["production"] = {"source_files": ["source/index.html"]}

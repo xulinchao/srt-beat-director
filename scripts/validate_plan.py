@@ -15,6 +15,7 @@ from broll_runtime import template_status, validate_runtime_decision
 from motion_review import motion_mode, validate_motion_plan
 from preflight import validate_preflight
 from sequence_quality import validate_plan as validate_sequence_plan
+from visual_timing import validate_visual_cuts
 
 
 CANONICAL_SEMANTIC_STRUCTURES = {
@@ -491,6 +492,7 @@ def main() -> int:
             errors.append(f"timeline_policy.{key} 应为 {value}")
 
     audio_duration = preflight.get("audio", {}).get("duration_ms")
+    errors.extend(validate_visual_cuts(plan, (project.get("video") or {}).get("fps"), audio_duration))
     sample = project.get("sample") or {}
     if isinstance(audio_duration, int) and sample.get("end_ms", 0) > audio_duration:
         errors.append("样片结束时间超过音频时长")

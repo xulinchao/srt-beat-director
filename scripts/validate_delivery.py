@@ -18,6 +18,7 @@ from preflight import validate_preflight
 from delivery_evidence import load_timeline_snapshot, validate_manifest, validate_timeline_item
 from validate_plan import validate_units
 from sequence_quality import validate as validate_sequence_quality
+from visual_timing import display_ranges, validate_visual_cuts
 
 
 def parse_args() -> argparse.Namespace:
@@ -228,6 +229,13 @@ def validate(project_dir: Path, prompts_path: Path, mode: str) -> dict:
                 errors.append(f"{label} 与 final_artifact.timeline_id 不一致")
 
     shots = plan.get("shots") or []
+    cut_errors = validate_visual_cuts(plan, fps, audio_duration_ms)
+    errors.extend(cut_errors)
+    try:
+        ranges = display_ranges(shots, audio_duration_ms or (shots[-1]["end_ms"] if shots else 0))
+    except (ValueError, TypeError, KeyError) as exc:
+        errors.append(f"视觉切点不可解析：{exc}")
+        ranges = None
     audit_shots = {str(item.get("id")): item for item in audit.get("shots") or []}
     if len(audit_shots) != len(audit.get("shots") or []) or set(audit_shots) != {str(s.get("id")) for s in shots}:
         errors.append("时间线审计镜头 ID 重复或与计划集合不一致")
@@ -248,12 +256,14 @@ def validate(project_dir: Path, prompts_path: Path, mode: str) -> dict:
         def frame_at(ms: float) -> int:
             return math.floor(ms * fps / 1000 + 0.5)
 
-        expected_start = 0 if shot_index == 0 else frame_at(shot["start_ms"])
-        expected_end = (frame_at(shots[shot_index + 1]["start_ms"]) if shot_index + 1 < len(shots)
-                        else media["decoded_frames"] if media else frame_at(audio_duration_ms or shot["end_ms"]))
+        if ranges is None:
+            continue
+        expected_start, expected_end = map(frame_at, ranges[shot_index])
+        if shot_index == len(shots) - 1 and media:
+            expected_end = media["decoded_frames"]
         expected_range = [expected_start, expected_end]
         if audited.get("timeline_range_frames") != expected_range or expected_end <= expected_start:
-            errors.append(f"{shot_id} timeline_range_frames 应为 {expected_range}（含空隙保持）")
+            errors.append(f"{shot_id} timeline_range_frames 应为 {expected_range}（含视觉切点与空隙保持）")
 
         planned_beats = shot.get("narration_beats") or []
         audited_beats = audited.get("beats") or []

@@ -15,8 +15,8 @@ from render_plan_markdown import (
 )
 
 
-TABLE_HEADER = "| 镜头 | 时间 | 配音文案 | 画面类型 | 画面设计 | 动态变化 | 画面衔接 |"
-TABLE_SEPARATOR = "|---|---|---|---|---|---|---|"
+TABLE_HEADER = "| 镜头 | 时间 | 配音文案 | A-roll / B-roll | 画面类型 | 画面设计 | 动态变化 | 画面衔接 |"
+TABLE_SEPARATOR = "|---|---|---|---|---|---|---|---|"
 ROUTE_HEADER = "| 镜头 | A/B | 动效方式 | 主制作工具 | 决策依据与辅助链路 |"
 ROUTE_SEPARATOR = "|---|---|---|---|---|"
 TIME_RE = re.compile(r"^(\d+)ms-(\d+)ms$")
@@ -55,13 +55,13 @@ def validate(plan: dict, markdown: str) -> dict:
     try:
         header_index = lines.index(TABLE_HEADER)
     except ValueError:
-        errors.append("缺少严格七列表头：" + TABLE_HEADER)
+        errors.append("缺少严格八列表头：" + TABLE_HEADER)
         header_index = -1
 
     rows: list[str] = []
     if header_index >= 0:
         if header_index + 1 >= len(lines) or lines[header_index + 1] != TABLE_SEPARATOR:
-            errors.append("七列表头下一行必须是标准 Markdown 分隔线")
+            errors.append("八列表头下一行必须是标准 Markdown 分隔线")
         for line in lines[header_index + 2 :]:
             if not line.startswith("|"):
                 break
@@ -73,8 +73,8 @@ def validate(plan: dict, markdown: str) -> dict:
 
     for index, (line, shot) in enumerate(zip(rows, expected_shots), start=1):
         cells = split_row(line)
-        if len(cells) != 9 or cells[0] != "" or cells[-1] != "":
-            errors.append(f"第 {index} 个镜头行不是七列：{line}")
+        if len(cells) != 10 or cells[0] != "" or cells[-1] != "":
+            errors.append(f"第 {index} 个镜头行不是八列：{line}")
             continue
         values = cells[1:-1]
         expected_id = f"S{index:03d}"
@@ -91,11 +91,14 @@ def validate(plan: dict, markdown: str) -> dict:
                 errors.append(f"{expected_id} 表格时间与 JSON 不一致")
         if values[2] != md_cell(shot.get("verbatim_text") or ""):
             errors.append(f"{expected_id} 配音文案与 JSON 的 verbatim_text 不一致")
+        role = shot.get("screen_role")
+        if role not in {"A", "B"} or values[3] != {"A": "A-roll", "B": "B-roll"}.get(role):
+            errors.append(f"{expected_id} A-roll / B-roll 与 JSON 的 screen_role 不一致")
         for column, label, render_cell in (
-            (3, "画面类型", display_type),
-            (4, "画面设计", design_text),
-            (5, "动态变化", changes_text),
-            (6, "画面衔接", transition_text),
+            (4, "画面类型", display_type),
+            (5, "画面设计", design_text),
+            (6, "动态变化", changes_text),
+            (7, "画面衔接", transition_text),
         ):
             if values[column] != md_cell(render_cell(shot)):
                 errors.append(f"{expected_id} {label}与 JSON 不一致，请重新生成可读视图")

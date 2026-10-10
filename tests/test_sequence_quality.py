@@ -176,6 +176,25 @@ class SequenceEvidenceTests(unittest.TestCase):
         self.assertEqual([], self.errors())
         self.assertEqual("pending", json.loads((self.root / "config/project.json").read_text(encoding="utf-8"))["status"]["sample"])
 
+    def test_visual_cut_changes_clip_and_state_evidence_ranges(self):
+        self.plan["shots"][1]["transition"] = {"visual_cut": {
+            "offset_ms": -200, "reason": "先看后听", "bridge": "提前仅呈现环境"}}
+        self.write("planning/visual-plan.json", self.plan)
+        self.write("planning/captured-plan.json", self.plan)
+        self.snapshot["plan_sha256"] = digest(self.root / "planning/captured-plan.json")
+        self.items[0]["range_frames"] = [0, 24]
+        self.items[1].update(range_frames=[24, 60], source_start_ms=800)
+        self.refresh_snapshot()
+        self.review["timeline"]["source_snapshot"] = self.ref("reports/snapshot.json")
+        self.review["plan_snapshot"] = self.ref("planning/captured-plan.json")
+        self.review["plan_scope_sha256"] = scope_hash(self.plan, ["S001", "S002"])
+        self.review["shots"][0]["state_evidence"][-1]["artifact_time_ms"] = 700
+        self.review["shots"][1]["state_evidence"][0]["artifact_time_ms"] = 800
+        self.review["transitions"][0]["artifact_time_ms"] = 800
+        self.assertEqual([], self.errors())
+        self.review["shots"][0]["state_evidence"][-1]["artifact_time_ms"] = 900
+        self.assertTrue(any("静帧时间点" in e for e in self.errors()))
+
     def test_ppt_failure_blocks_expansion_even_with_valid_media(self):
         self.review["sequence_checks"]["ppt_feel"] = {"status": "fail", "notes": "逐页换图，动作没有解释收益"}
         self.assertTrue(any("ppt_feel" in e for e in self.errors("expand")))

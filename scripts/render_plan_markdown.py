@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Render the seven-column visual plan and per-shot production routes from JSON."""
+"""Render the eight-column visual plan and per-shot production routes from JSON."""
 
 from __future__ import annotations
 
@@ -8,8 +8,8 @@ import json
 from pathlib import Path
 
 
-TABLE_HEADER = "| 镜头 | 时间 | 配音文案 | 画面类型 | 画面设计 | 动态变化 | 画面衔接 |"
-TABLE_SEPARATOR = "|---|---|---|---|---|---|---|"
+TABLE_HEADER = "| 镜头 | 时间 | 配音文案 | A-roll / B-roll | 画面类型 | 画面设计 | 动态变化 | 画面衔接 |"
+TABLE_SEPARATOR = "|---|---|---|---|---|---|---|---|"
 ROUTE_HEADER = "| 镜头 | A/B | 动效方式 | 主制作工具 | 决策依据与辅助链路 |"
 ROUTE_SEPARATOR = "|---|---|---|---|---|"
 DISPLAY_TYPES = {"人物画面", "场景画面", "真实素材", "信息图形", "文字动效"}
@@ -106,9 +106,15 @@ def transition_text(shot: dict) -> str:
     transition = shot.get("transition") or {}
     from_previous = transition.get("from_previous") or ""
     to_next = transition.get("to_next") or ""
-    if from_previous and to_next:
-        return f"前接：{from_previous}<br>后接：{to_next}"
-    return from_previous or to_next or "待补充"
+    text = (f"前接：{from_previous}<br>后接：{to_next}" if from_previous and to_next
+            else from_previous or to_next or "待补充")
+    if "visual_cut" in transition:
+        from visual_timing import cut_ms
+        cut = transition["visual_cut"]
+        at = cut_ms(shot)
+        text += (f"<br>视觉切入：{at}ms（相对语义起点 {cut['offset_ms']:+d}ms）"
+                 f"；理由：{cut.get('reason', '')}；交接画面：{cut.get('bridge', '')}")
+    return text
 
 
 def motion_intent_text(shot: dict) -> str:
@@ -188,7 +194,7 @@ def render(plan: dict) -> str:
         "# 视觉编排表",
         "",
         f"- 项目：`{plan.get('project_id', '')}`",
-        "- 时间真源：SRT/配音对齐轴；表内时间单位为毫秒",
+        "- 时间真源：SRT/配音对齐轴；时间列保留语义边界，视觉切点另见画面衔接；单位为毫秒",
         f"- 镜头数：{len(shots)}（A-roll {a_count} / B-roll {b_count}）",
         "- 机器真源：`planning/visual-plan.json`",
         "",
@@ -201,6 +207,7 @@ def render(plan: dict) -> str:
             shot.get("id", ""),
             time,
             shot.get("verbatim_text", ""),
+            {"A": "A-roll", "B": "B-roll"}.get(shot.get("screen_role"), "待确认"),
             display_type(shot),
             design_text(shot),
             changes_text(shot),

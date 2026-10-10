@@ -40,6 +40,11 @@ class ProductionRouteMarkdownTests(unittest.TestCase):
             with self.subTest(field=path):
                 self.assertEqual(validate(plan, render(plan))["status"], "fail")
 
+    def test_main_table_role_must_match_json(self):
+        markdown = render(self.plan)
+        self.assertIn("| B-roll |", markdown)
+        self.assertEqual(validate(self.plan, markdown.replace("| B-roll |", "| A-roll |"))["status"], "fail")
+
     def test_removing_route_section_is_rejected(self):
         markdown = render(self.plan)
         start, end = markdown.index("## 逐镜制作路由"), markdown.index("## 全片检查")

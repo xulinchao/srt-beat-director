@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import copy
 import json
 import sys
 import tempfile
@@ -281,6 +282,64 @@ class DeliveryClosureTests(unittest.TestCase):
     def test_invalid_shot_frame_range(self):
         self.mutate("reports/timeline-audit.json", lambda d: d["shots"][0].update(timeline_range_frames=[9000, 9001]))
         self.assert_rejected("timeline_range_frames")
+
+    def test_visual_lead_delivery_uses_real_cut_and_keeps_narration_time(self):
+        # Two semantic seconds, with the second picture entering at 800ms.
+        read = lambda name: json.loads((self.project_dir / name).read_text(encoding="utf-8"))
+        shots, rows, items = [], [], []
+        base_record = read("prompts/a-scenes/S001.json")
+        audit = read("reports/timeline-audit.json")
+        for i, bounds in enumerate(([0, 24], [24, 60])):
+            shot = copy.deepcopy(self.shot)
+            shot.update(id=f"S{i+1:03}", start_ms=i*1000, end_ms=(i+1)*1000, cue_ids=[i+1])
+            shot["narration_beats"][0].update(at_ms=i*1000, cue_ids=[i+1])
+            shots.append(shot)
+            record = copy.deepcopy(base_record)
+            record["subject_id"] = shot["id"]
+            record["action_sequence"]["beats"][0]["at_ms"] = i*1000
+            self.write(f"prompts/a-scenes/{shot['id']}.json", record)
+            row = copy.deepcopy(audit["shots"][0])
+            row.update(id=shot["id"], plan_range_ms=[i*1000, (i+1)*1000], timeline_range_frames=bounds)
+            row["beats"][0].update(at_ms=i*1000, timeline_at_ms=i*1000)
+            row["beats"][0]["evidence"]["timeline_items"] = [
+                {"item_id": f"item-{i+1}", "asset_id": f"asset-{i+1}", "range_frames": bounds}]
+            rows.append(row)
+            items.append({"id": f"item-{i+1}", "asset": f"asset-{i+1}", "artifact": self.artifact_path,
+                          "range_frames": bounds, "source_start_ms": 0, "playback_rate": 1})
+        shots[1]["transition"] = {"visual_cut": {"offset_ms": -200, "reason": "先认出主体", "bridge": "信息按旁白出现"}}
+        self.write("planning/visual-plan.json", {"shots": shots})
+        self.write("planning/content-analysis.json", {"semantic_segments": shots})
+        self.write("reports/timeline-audit.json", dict(audit, shots=rows))
+        (self.project_dir / "input/source.srt").write_text(
+            "1\n00:00:00,000 --> 00:00:01,000\n一句话\n\n2\n00:00:01,000 --> 00:00:02,000\n一句话\n", encoding="utf-8")
+        self.mutate("planning/preflight-report.json", lambda d: d.update(
+            srt={"cues": [{"id": i+1, "start_ms": i*1000, "end_ms": (i+1)*1000, "text": "一句话"} for i in range(2)]},
+            inputs=dict(d["inputs"], srt_sha256=digest(self.project_dir / "input/source.srt"))))
+        self.write("reports/raw-timeline.json", {"items": items})
+        snapshot = read("reports/timeline-source.json")
+        snapshot["sources"][0]["sha256"] = digest(self.project_dir / "reports/raw-timeline.json")
+        snapshot["plan_sha256"] = digest(self.project_dir / "planning/visual-plan.json")
+        prototype = snapshot["items"][0]
+        snapshot["items"] = []
+        for i, item in enumerate(items):
+            entry = copy.deepcopy(prototype)
+            entry.update(item_id=item["id"], asset_id=item["asset"], range_frames=item["range_frames"])
+            entry["origin"]["fields"] = {k: v.replace("/items/0/", f"/items/{i}/") for k, v in entry["origin"]["fields"].items()}
+            snapshot["items"].append(entry)
+        self.write("reports/timeline-source.json", snapshot)
+        self.refresh_timeline_reference()
+        self.write("preview/sample-dependencies.json", {
+            "schema_version": "1.0", "sample_artifact": "preview/sample.mp4",
+            "sample_sha256": digest(self.project_dir / "preview/sample.mp4"),
+            "dependencies": current_dependencies(self.project_dir)})
+        self.mutate("config/project.json", lambda d: (
+            d["approvals"]["plan"].update(sha256=digest(self.project_dir / "planning/visual-plan.json")),
+            d["approvals"]["sample"]["dependencies"].update(sha256=digest(self.project_dir / "preview/sample-dependencies.json"))))
+        self.refresh_manifest()
+        report = validate_delivery.validate(self.project_dir, self.prompts_path, "review")
+        self.assertEqual("pass", report["status"], report["errors"])
+        self.mutate("reports/timeline-audit.json", lambda d: d["shots"][0].update(timeline_range_frames=[0, 30]))
+        self.assert_rejected("timeline_range_frames 应为 [0, 24]")
 
     def test_item_must_cover_beat(self):
         self.mutate("reports/timeline-audit.json", lambda d: d["shots"][0]["beats"][0]["evidence"]["timeline_items"][0].update(range_frames=[20, 60]))

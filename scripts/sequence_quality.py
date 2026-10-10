@@ -10,6 +10,7 @@ from broll_runtime import RUNTIMES
 from delivery_evidence import load_timeline_snapshot, local_file
 from media_evidence import digest, probe_still, probe_video
 from motion_review import motion_mode
+from visual_timing import display_ranges, validate_visual_cuts
 
 POLICY = "sequence-quality-v1"
 PROGRAMMATIC = RUNTIMES | {"chatcut-motion-graphics"}
@@ -27,6 +28,15 @@ def scope_hash(plan: dict, shot_ids: list[str]) -> str:
     selected = set(shot_ids)
     value = {"shared": {k: v for k, v in plan.items() if k != "shots"},
              "shots": [s for s in plan.get("shots", []) if s.get("id") in selected]}
+    # An unselected next shot can still determine the selected shot's exit.
+    shots = plan.get("shots", [])
+    outgoing = [{"id": s.get("id"), "start_ms": s.get("start_ms"),
+                 "visual_cut": s["transition"]["visual_cut"]}
+                for i, s in enumerate(shots) if i > 0 and shots[i-1].get("id") in selected
+                and s.get("id") not in selected
+                and isinstance(s.get("transition"), dict) and "visual_cut" in s["transition"]]
+    if outgoing:
+        value["outgoing_visual_cuts"] = outgoing
     return hashlib.sha256(json.dumps(value, ensure_ascii=False, sort_keys=True,
                                     separators=(",", ":")).encode("utf-8")).hexdigest()
 
@@ -39,6 +49,7 @@ def needs_reference(shot: dict) -> bool:
 
 def validate_plan(plan: dict, project: dict) -> dict:
     errors, warnings = [], []
+    errors.extend(validate_visual_cuts(plan, (project.get("video") or {}).get("fps")))
     policy = project.get("sequence_review_policy")
     if policy is None:
         warnings.append("旧任务未接入连续镜头质量门；不自动迁移或声称已验证")
@@ -171,8 +182,8 @@ def validate(root: Path, stage: str, *, plan: dict | None = None, project: dict 
             raise ValueError("range_ms 必须为非空半开毫秒区间")
         if key == "sample" and bounds != [project.get("sample", {}).get("start_ms"), project.get("sample", {}).get("end_ms")]:
             errors.append("连续镜头审阅范围与配置样片区间不一致")
-        selected = [s for i, s in enumerate(shots) if (0 if i == 0 else s["start_ms"]) < bounds[1]
-                    and (shots[i + 1]["start_ms"] if i + 1 < len(shots) else max(s["end_ms"], bounds[1])) > bounds[0]]
+        ranges = display_ranges(shots, max(shots[-1]["end_ms"], bounds[1]) if shots else bounds[1])
+        selected = [s for s, (start, end) in zip(shots, ranges) if start < bounds[1] and end > bounds[0]]
         ids = [s["id"] for s in selected]
         rows = review.get("shots")
         if not isinstance(rows, list) or [r.get("shot_id") for r in rows if isinstance(r, dict)] != ids or not ids:
@@ -246,9 +257,8 @@ def validate(root: Path, stage: str, *, plan: dict | None = None, project: dict 
             if not isinstance(item_ids, list) or not item_ids or any(i not in snapshot_items for i in item_ids):
                 errors.append(f"{sid} 缺少实际时间线实例映射")
             elif media:
-                a = 0 if shots.index(shot) == 0 else shot["start_ms"]
                 index = shots.index(shot)
-                b = shots[index + 1]["start_ms"] if index + 1 < len(shots) else bounds[1]
+                a, b = ranges[index]
                 first = math.floor((max(a, bounds[0]) - bounds[0]) * media["fps"] / 1000 + 0.5)
                 end = math.floor((min(b, bounds[1]) - bounds[0]) * media["fps"] / 1000 + 0.5)
                 intervals = sorted(snapshot_items[i]["range_frames"] for i in item_ids)
@@ -278,9 +288,9 @@ def validate(root: Path, stage: str, *, plan: dict | None = None, project: dict 
                 if path:
                     probe_still(path)
                 at = state.get("artifact_time_ms")
-                start = max(shot["start_ms"] if shots.index(shot) else 0, bounds[0]) - bounds[0]
                 index = shots.index(shot)
-                end = min(shots[index + 1]["start_ms"] if index + 1 < len(shots) else bounds[1], bounds[1]) - bounds[0]
+                start = max(ranges[index][0], bounds[0]) - bounds[0]
+                end = min(ranges[index][1], bounds[1]) - bounds[0]
                 if type(at) is not int or not start <= at < end:
                     errors.append(f"{sid} 静帧时间点不在本次视频的镜头范围内")
             if motion_mode(shot) != "single-state" and len({s.get("artifact_time_ms") for s in states}) < 3:
@@ -297,7 +307,9 @@ def validate(root: Path, stage: str, *, plan: dict | None = None, project: dict 
                     probe_still(path)
                 at = transition.get("artifact_time_ms")
                 pair = [s for s in selected if s["id"] in {transition.get("from"), transition.get("to")}]
-                if type(at) is not int or not max(pair[0]["start_ms"], bounds[0])-bounds[0] <= at < min(pair[-1]["end_ms"], bounds[1])-bounds[0]:
+                first_range = ranges[shots.index(pair[0])]
+                last_range = ranges[shots.index(pair[-1])]
+                if type(at) is not int or not max(first_range[0], bounds[0])-bounds[0] <= at < min(last_range[1], bounds[1])-bounds[0]:
                     errors.append("衔接证据时间不在本次视频的相邻镜头范围内")
         if stage == "expand":
             for shot in shots:
